@@ -1,40 +1,192 @@
-[2508-CDCS230] 2022675706 (06) MUHAMMAD AQIMAN BIN MOHD FAUZI
-Comparative Analysis of Academic Performance and Applied Technical Skills among Computer Science Students using Agglomerative Clustering
+# 🎓 Skillytics
 
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-|																													|
-|																													|
-|														SETUP														|
-|																													|
-|																													|
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## 📌 Overview
 
-1.	Database setup:
-	- The system uses SQLite
-	- Install Database Client extension in IDE (VSCode, Cursor AI, etc)
-	- Link the system with the database
+Skillytics is a **student analytics system** designed to analyze academic and technical skill performance using machine learning.
 
-2.	Email setup:
-	- Open .env and replace the value for MAIL_USERNAME and MAIL_PASSWORD with your own email
-	- Please use your App Password for MAIL_PASSWORD instead of original password (refer [https://myaccount.google.com/apppasswords])
-	- This email will be used by system to send notification to the user automatically (usually known as noreply) such as forgot password and alert message
+The system processes raw student datasets, cleans and transforms the data, and applies **Agglomerative Clustering** to group students based on their academic and technical skill performance.
 
-3.	Users:
-	- The system cannot register new user because students' data is originally obtained from existing database in university. Hence, to test the system, existing data will be provided below:
+These clusters help administrators **identify student performance patterns**, allowing better decisions when planning academic support, training programs, or skill improvement initiatives.
 
-	A. Administrator/Head of Centre Study:
-		- ID: 100000
-		- Password: 123
+This project demonstrates practical skills in **data preprocessing, machine learning, backend development, and database integration using Python.**
 
-	B. Faculty Coordinator/Staff:
-		- ID: 100001
-		- Password: 123
+---
 
-	C. Student:
-		- ID: 2022332833
-		- Password: 123
+## ❗ Problem Statement
 
+Educational institutions collect large amounts of student performance data, but this data is often **unstructured and difficult to analyze effectively**.
 
+Without proper analysis, administrators cannot easily identify:
 
+* Students who need additional support
+* Performance patterns across groups
+* Skill gaps between academic and technical abilities
 
+Skillytics solves this by transforming raw data into structured datasets and applying **clustering algorithms** to automatically group students based on performance similarities.
 
+---
+
+## 🧠 Machine Learning Approach
+
+Skillytics uses **Agglomerative Clustering**, a hierarchical clustering algorithm that groups students based on similarity in performance metrics.
+
+The algorithm works by:
+
+1. Treating each student as an individual cluster
+2. Iteratively merging the most similar clusters
+3. Forming hierarchical groups of students with similar skill profiles
+
+This allows administrators to easily identify clusters such as:
+
+* ⭐ High-performing students
+* ⚖️ Balanced performers
+* ⚠️ Students requiring academic support
+
+---
+
+## ✨ Key Features
+
+* 📊 Data preprocessing and cleaning pipeline using **Pandas**
+* 🧹 Transformation of raw datasets into structured data
+* 🧠 Student grouping using **Agglomerative Clustering**
+* 🗄️ Database integration for storing processed datasets
+* ⚙️ Backend application built with **Flask**
+* 🔄 Modular scripts for automated data processing workflows
+
+---
+
+## 🛠️ Tech Stack
+
+### 💻 Language
+
+* Python
+
+### ⚙️ Framework
+
+* Flask
+
+### 🗄️ Database
+
+* SQLite
+
+### 📚 Libraries
+
+* Pandas
+* Scikit-learn
+* SQLAlchemy
+
+### 🔧 Tools
+
+* Git
+* GitHub
+
+---
+
+## 📁 Project Structure
+
+```
+Skillytics/
+│
+├── app.py                     # Main application entry point
+├── insert-data-to-db.py       # Script to insert cleaned data into database
+├── original-to-clean.py       # Data cleaning and transformation script
+│
+├── migrations/                # Database migration files
+├── instance/                  # Application instance configuration
+├── skillytics/                # Core application modules
+│
+├── venv/                      # Python virtual environment (ignored in Git)
+├── node_modules/              # Node dependencies (ignored in Git)
+│
+├── README.md                  # Project documentation
+└── .gitignore
+```
+
+---
+
+## 🔄 Data Processing Workflow
+
+The system follows a structured data pipeline:
+
+1️⃣ Raw student dataset is collected
+2️⃣ Data cleaning is performed using `original-to-clean.py`
+3️⃣ Cleaned dataset is processed and prepared for clustering
+4️⃣ **Agglomerative Clustering** groups students based on performance
+5️⃣ Processed data is inserted into the database using `insert-data-to-db.py`
+6️⃣ Flask backend reads the data for analysis and administrative insights
+
+---
+
+## 🚀 Installation
+
+Clone the repository
+
+```
+git clone https://github.com/aqimxn/Skillytics.git
+cd Skillytics
+```
+
+Create a virtual environment
+
+```
+python -m venv venv
+```
+
+Activate the environment
+
+Linux / Mac
+
+```
+source venv/bin/activate
+```
+
+Windows
+
+```
+venv\Scripts\activate
+```
+
+Install dependencies
+
+```
+pip install -r requirements.txt
+```
+
+Run the application
+
+```
+python app.py
+```
+
+---
+
+## 🎯 Learning Outcomes
+
+This project demonstrates:
+
+* 📊 Data preprocessing and cleaning using **Pandas**
+* 🤖 Machine learning using **Agglomerative Clustering**
+* 🗄️ Database integration using **SQLAlchemy**
+* ⚙️ Backend development using **Flask**
+* 📂 Writing modular and maintainable Python scripts
+* 🔧 Version control using **Git and GitHub**
+
+---
+
+## 🔮 Future Improvements
+
+* 🌐 Create REST API endpoints for analytics data
+* 🐳 Containerize the application using Docker
+* 🧪 Add automated testing for the data pipeline
+* ☁️ Deploy the system using cloud infrastructure
+
+---
+
+## 👨‍💻 Author
+
+**Muhammad Aqiman**
+
+Computer Science Graduate
+Interested in **Backend Engineering, Cloud Systems, and Data Engineering**
+
+🔗 GitHub: https://github.com/aqimxn
