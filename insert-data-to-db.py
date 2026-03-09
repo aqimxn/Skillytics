@@ -11,7 +11,7 @@ def create_db_and_load_data():
     print("📦 Creating database tables and loading data ...")
     db.create_all()
 
-    clean_data = 'C:/Users/aqima/OneDrive/Desktop/PROJECT/skillytics/data/clean-data.csv'
+    clean_data = './skillytics/data/clean-data.csv'
     df = pd.read_csv(clean_data)
 
     df = df.replace({np.nan: None})
