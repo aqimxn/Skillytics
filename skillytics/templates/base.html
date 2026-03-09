@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>{% block title %}Skillytics{% endblock %}</title>
+  <!-- base:css -->
+  <link rel="stylesheet" href="static/vendors/typicons.font/font/typicons.css">
+  <link rel="stylesheet" href="static/vendors/css/vendor.bundle.base.css">
+  <!-- endinject -->
+  <!-- plugin css for this page -->
+  <!-- End plugin css for this page -->
+  <!-- inject:css -->
+  <link rel="stylesheet" href="static/css/vertical-layout-light/style.css">
+  <!-- endinject -->
+  <link rel="shortcut icon" href="static/images/logo.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/typicons/2.0.9/typicons.min.css">
+
+  <style>
+    /* Floating dropdown - desktop default */
+    .floating-dropdown {
+      position: fixed;
+      top: 90px;
+      left: 286px;
+      z-index: 1000;
+    }
+
+    /* On mobile/tablet: float dropdown becomes top-of-content static */
+    @media (max-width: 991px) {
+      .floating-dropdown {
+        position: static !important;
+        margin-bottom: 20px;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      .floating-dropdown .dropdown {
+        margin: 0 !important;
+      }
+
+      /* Make charts scroll within their container */
+      .chart-responsive-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 15px;
+      }
+
+      /* Prevent charts from overflowing page */
+      .highcharts-container {
+        min-width: 0 !important;
+        width: 100% !important;
+      }
+
+      /* Stack gauge charts vertically on small screens */
+      #academic-gauge,
+      #technical-gauge,
+      #technical-gauge-current-part {
+        width: 100% !important;
+        min-width: 280px !important;
+        height: 300px !important;
+      }
+
+      /* Pie chart: allow full width on mobile */
+      #all-status-pie {
+        width: 100% !important;
+        max-width: 280px;
+        margin: 0 auto;
+      }
+    }
+
+    /* Sidebar-hidden / sidebar-icon-only states: keep dropdown synced */
+    body.sidebar-hidden .floating-dropdown,
+    body.sidebar-icon-only .floating-dropdown {
+      left: 70px;
+    }
+
+    .tab-link {
+      position: relative;
+      padding-bottom: 5px;
+      transition: color 0.3s ease;
+    }
+
+    .tab-link::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 0%;
+      height: 2px;
+      background-color: #11447b;
+      /* change to your theme color */
+      transition: width 1.5s ease;
+    }
+
+    .tab-link.active::after {
+      width: 100%;
+    }
+
+    .sortable {
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .sortable .fa-sort-up,
+    .sortable .fa-sort-down {
+      margin-left: 5px;
+      color: #007bff;
+    }
+
+    .nav-item.logout-hover:hover {
+      background-color: #f8d7da;
+      /* light red/pink background */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      /* soft shadow */
+      transform: scale(1.03);
+      /* slight zoom */
+      transition: all 0.3s ease-in-out;
+    }
+
+    .nav-item.logout-hover a:hover {
+      color: #b02a37 !important;
+      /* darker red text on hover */
+    }
+
+    .nav-item.logout-hover i {
+      transition: transform 0.3s ease;
+    }
+
+    .nav-item.logout-hover:hover i {
+      transform: rotate(10deg) scale(1.1);
+    }
+
+    /* Cluster Interpretation Styles */
+    .cluster-interpretation {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 15px;
+      padding: 20px;
+      margin: 10px 0;
+      color: white;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .cluster-interpretation:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.5);
+    }
+
+    .cluster-header {
+      font-size: 1.2em;
+      font-weight: bold;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .cluster-details {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .detail-item {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 10px 15px;
+      border-radius: 10px;
+      text-align: center;
+      min-width: 120px;
+    }
+
+    .detail-label {
+      font-size: 0.8em;
+      opacity: 0.8;
+      margin-bottom: 5px;
+    }
+
+    .detail-value {
+      font-size: 1.1em;
+      font-weight: bold;
+    }
+
+    .performance-high {
+      background: linear-gradient(135deg, #4CAF50, #45a049) !important;
+    }
+
+    .performance-medium {
+      background: linear-gradient(135deg, #FF9800, #F57C00) !important;
+    }
+
+    .performance-low {
+      background: linear-gradient(135deg, #f44336, #d32f2f) !important;
+    }
+
+    .cluster-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 1.5em;
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    @media (max-width: 768px) {
+      .cluster-details {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .detail-item {
+        width: 100%;
+        max-width: 200px;
+      }
+    }
+
+    @media (min-width: 992px) {
+      .sidebar-icon-only .sidebar .nav {
+        overflow: visible !important;
+      }
+    }
+  </style>
+
+  {% block custom_style %}{% endblock %}
+
+</head>
+
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/highcharts.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/highcharts-more.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/exporting.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/accessibility.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/solid-gauge.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/networkgraph.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/sankey.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/organization.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/treemap.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/treegraph.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/packed-bubble.js"></script>
+  <div class="container-scroller">
+    <!-- partial:partials/_navbar.html -->
+    <nav class="navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row">
+      <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-center">
+        <a class="navbar-brand brand-logo" href="{{ url_for('main.dashboard') }}"><img src="static/images/full-logo.svg"
+            alt="logo" /></a>
+        <a class="navbar-brand brand-logo-mini text-center" href="{{ url_for('main.dashboard') }}"><img
+            src="static/images/logo.png" alt="logo" /></a>
+        <button class="navbar-toggler navbar-toggler align-self-center d-none d-lg-flex" type="button"
+          data-toggle="minimize">
+          <span class="typcn typcn-th-menu"></span>
+        </button>
+      </div>
+
+      <!-- Staff Clustering page -->
+      {% set clustering = ['main.clustering_both', 'main.clustering_academic', 'main.clustering_technical'] %}
+
+      <div class="navbar-menu-wrapper d-flex align-items-center justify-content-end">
+
+        {% set technical = ['main.form_technical'] %}
+        {% if request.endpoint in technical %}
+        <ul class="navbar-nav mr-lg-2">
+          <li class="nav-item  d-none d-lg-flex">
+
+            <a class="nav-link tab-link active" style="cursor: pointer;">
+              Digital Literacy
+            </a>
+
+          </li>
+          <li class="nav-item  d-none d-lg-flex">
+
+            <a class="nav-link tab-link" style="cursor: pointer;">
+              Programming
+            </a>
+
+          </li>
+          <li class="nav-item  d-none d-lg-flex">
+
+            <a class="nav-link tab-link" style="cursor: pointer;">
+              Data Science & Machine Learning
+            </a>
+
+          </li>
+        </ul>
+        {% endif %}
+
+
+        <ul class="navbar-nav navbar-nav-right">
+          <li class="nav-item d-flex bg-light px-3 py-0 rounded-pill mt-3 mb-3 logout-hover">
+            <a href="{{ url_for('main.logout') }}"
+              class="d-flex align-items-center justify-content-center text-decoration-none text-reset"
+              title="Hmm are you sure?">
+              Logout <i class="fas fa-power-off ml-2" style="font-size: 20px; color: #e84c4c;"></i>
+            </a>
+          </li>
+          <li class="nav-item nav-profile dropdown">
+            <a class="nav-link dropdown-toggle  pl-0 pr-0" href="#" data-toggle="dropdown" id="profileDropdown">
+              <i class="typcn typcn-user-outline mr-0"></i>
+              <span class="nav-profile-name">Hi, {{ current_user.first_name }}</span>
+            </a>
+            <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="profileDropdown">
+              <a class="dropdown-item" href="{{ url_for('main.profile') }}">
+                <i class="typcn typcn-user text-primary"></i>
+                Profile
+              </a>
+              <a class="dropdown-item" href="{{ url_for('main.logout') }}">
+                <i class="typcn typcn-power text-primary"></i>
+                Logout
+              </a>
+            </div>
+          </li>
+        </ul>
+        <button class="navbar-toggler navbar-toggler-right d-lg-none align-self-center" type="button"
+          data-toggle="offcanvas">
+          <span class="typcn typcn-th-menu"></span>
+        </button>
+      </div>
+    </nav>
+    <!-- partial -->
+    <div class="container-fluid page-body-wrapper sidebar-fixed">
+      <nav class="sidebar sidebar-offcanvas" id="sidebar">
+        <ul class="nav">
+          <li class="nav-item">
+            <div class="d-flex sidebar-profile">
+              <div class="sidebar-profile-image">
+                <img src="{{ url_for('static', filename='images/' + current_user.picture) }}" alt="Profile Picture">
+                <span class="sidebar-status-indicator"></span>
+              </div>
+              <div class="sidebar-profile-name">
+                <p class="sidebar-name text-truncate" style="max-width: 180px;" title="{{ current_user.email }}">
+                  {{ current_user.email }}
+                </p>
+                <p class="sidebar-designation">
+                  {{ current_user.position if is_staff or is_admin else 'Student' }}
+                </p>
+              </div>
+            </div>
+          </li>
+          <li class="nav-item mt-3">
+            <a class="nav-link" href="">
+              <i class="typcn typcn-document menu-icon"></i>
+              <span class="menu-title">User Manual</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.dashboard') }}">
+              <i class="typcn typcn-device-desktop menu-icon"></i>
+              <span class="menu-title">Dashboard</span>
+            </a>
+          </li>
+          {% if is_staff or is_admin %}
+          <li class="nav-item">
+            <a class="nav-link" data-toggle="collapse" href="#charts" aria-expanded="false" aria-controls="charts">
+              <i class="typcn typcn-chart-line-outline menu-icon"></i>
+              <span class="menu-title">Analysis</span>
+              <i class="menu-arrow"></i>
+            </a>
+            <div class="collapse" id="charts">
+              <ul class="nav flex-column sub-menu">
+                <li class="nav-item"> <a class="nav-link" href="{{ url_for('main.clustering_both') }}">Academic +
+                    Technical</a></li>
+                <li class="nav-item"> <a class="nav-link" href="{{ url_for('main.clustering_academic') }}">Academic
+                    Performance</a></li>
+                <li class="nav-item"> <a class="nav-link" href="{{ url_for('main.clustering_technical') }}">Technical
+                    Skills</a></li>
+              </ul>
+            </div>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link" data-toggle="collapse" href="#tables"
+              aria-expanded="{% if request.endpoint in ['main.staff_students', 'main.staff_students_details'] %}true{% else %}false{% endif %}"
+              aria-controls="tables">
+              <i class="typcn typcn-group-outline menu-icon"></i>
+              {% if is_admin %}
+              <span class="menu-title">Users</span>
+              {% else %}
+              <span class="menu-title">User</span>
+              {% endif %}
+              <i class="menu-arrow"></i>
+            </a>
+            <div
+              class="collapse {% if request.endpoint in ['main.staff_students', 'main.staff_students_details'] %}show{% endif %}"
+              id="tables">
+              <ul class="nav flex-column sub-menu">
+                {% if is_admin %}
+                <li class="nav-item"> <a class="nav-link" href="{{ url_for('main.staff_staffs') }}">Staffs</a></li>
+                {% endif %}
+                <li class="nav-item"> <a
+                    class="nav-link {% if request.endpoint in ['main.staff_students', 'main.staff_students_details'] %}active{% endif %}"
+                    href="{{ url_for('main.staff_students') }}">Students</a></li>
+              </ul>
+            </div>
+          </li>
+          {% if is_admin %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.add_staff') }}">
+              <i class="typcn typcn-user-add-outline menu-icon"></i>
+              <span class="menu-title">Add Staff
+            </a>
+          </li>
+          {% endif %}
+          {% endif %}
+          {% if is_student %}
+          <li class="nav-item">
+            <a class="nav-link" data-toggle="collapse" href="#tables" aria-expanded="false" aria-controls="tables">
+              <i class="typcn typcn-pencil menu-icon"></i>
+              <span class="menu-title">Forms</span>
+              {% if current_user.status == 'Incomplete' %}
+              <span class="badge badge-warning ml-2">Incomplete</span>
+              {% else %}
+              <span class="badge badge-success ml-2">Completed</span>
+              {% endif %}
+              <i class="menu-arrow"></i>
+            </a>
+            <div class="collapse" id="tables">
+              <ul class="nav flex-column sub-menu">
+                <li class="nav-item">
+                  <a class="nav-link" href="{{ url_for('main.form_ts_category', category='dl') }}">Digital Literacy</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link"
+                    href="{{ url_for('main.form_ts_category', category='programming') }}">Programming</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="{{ url_for('main.form_ts_category', category='ds-ml') }}">Data Science</a>
+                </li>
+              </ul>
+            </div>
+          </li>
+          {% endif %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.view_notification') }}">
+              <i class="typcn typcn-bell menu-icon"></i>
+              <span class="menu-title">{% if is_student %}Notification{% else %}Announcement{% endif %}
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.profile') }}">
+              <i class="typcn typcn-user menu-icon"></i>
+              <span class="menu-title">My Profile
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.change_password') }}">
+              <i class="typcn typcn-lock-closed menu-icon"></i>
+              <span class="menu-title">Change Password
+            </a>
+          </li>
+          {% if is_staff or is_student %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.feedback') }}">
+              <i class="typcn typcn-message menu-icon"></i>
+              <span class="menu-title">Send Feedback</span>
+            </a>
+          </li>
+          {% else %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.admin_list_feedback') }}">
+              <i class="typcn typcn-message menu-icon"></i>
+              <span class="menu-title">List of Feedback</span>
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+      <div class="main-panel">
+        {% block content %}
+        {% endblock %}
+      </div>
+    </div>
+    <!-- page-body-wrapper ends -->
+  </div>
+  <script src="static/vendors/js/vendor.bundle.base.js"></script>
+  <!-- endinject -->
+
+  <!-- inject:js -->
+  <script src="static/js/off-canvas.js"></script>
+  <script src="static/js/hoverable-collapse.js"></script>
+  <script src="static/js/template.js"></script>
+  <script src="static/js/settings.js"></script>
+  <script src="static/js/todolist.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Highcharts AFTER vendor bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/highcharts.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/highcharts-more.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/exporting.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/accessibility.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/solid-gauge.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/networkgraph.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/sankey.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/organization.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/treemap.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/treegraph.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highcharts/modules/packed-bubble.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      function syncSidebarState() {
+        var body = document.body;
+        var wrapper = document.querySelector('.page-body-wrapper');
+        // Sync sidebar-hidden
+        if (body.classList.contains('sidebar-hidden')) {
+          wrapper.classList.add('sidebar-hidden');
+        } else {
+          wrapper.classList.remove('sidebar-hidden');
+        }
+        // Sync sidebar-icon-only
+        if (body.classList.contains('sidebar-icon-only')) {
+          wrapper.classList.add('sidebar-icon-only');
+        } else {
+          wrapper.classList.remove('sidebar-icon-only');
+        }
+      }
+      syncSidebarState();
+      // Listen for class change on body
+      var observer = new MutationObserver(syncSidebarState);
+      observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      var togglers = document.querySelectorAll('.navbar-toggler');
+      togglers.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          setTimeout(syncSidebarState, 10);
+        });
+      });
+    });
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      function syncFloatingDropdown() {
+        var wrapper = document.querySelector('.page-body-wrapper');
+        var dropdown = document.querySelector('.floating-dropdown');
+        if (!dropdown) return;
+        if (wrapper.classList.contains('sidebar-hidden')) {
+          dropdown.style.left = '100px';
+        } else if (wrapper.classList.contains('sidebar-icon-only')) {
+          dropdown.style.left = '100px';
+        } else {
+          dropdown.style.left = '286px';
+        }
+      }
+      syncFloatingDropdown();
+      var observer = new MutationObserver(syncFloatingDropdown);
+      var wrapper = document.querySelector('.page-body-wrapper');
+      if (wrapper) {
+        observer.observe(wrapper, { attributes: true, attributeFilter: ['class'] });
+      }
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Skillytics{% endblock %}
+
+{% block custom_style %}
+<style>
+  h4 {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 25px;
+    position: relative;
+    display: inline-block;
+  }
+
+  h4:after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -10px;
+    width: 85px;
+    height: 4px;
+    background: linear-gradient(to right, #3498db, #2980b9);
+    border-radius: 2px;
+  }
+
+  .profile-image-container {
+    position: relative;
+    display: inline-block;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
+  .profile-image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 50%;
+  }
+
+  .profile-image-container:hover .profile-image-overlay {
+    opacity: 1;
+  }
+
+  .edit-icon {
+    font-size: 24px;
+    margin-bottom: 5px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <div class="row m-2">
+    <div class="col-xl-12 d-flex grid-margin stretch-card p-0">
+      <div class="card w-100">
+        <div class="card-body">
+          <h4 class="card-title mb-4" style="position: relative;">My Profile</h4>
+
+          <!-- Profile Picture Form -->
+          <form action="" method="POST" enctype="multipart/form-data" id="profilePictureForm">
+            <div class="text-center mb-5">
+              <label for="profileImageInput" style="cursor: pointer;" title="Click to change profile picture"
+                class="d-inline-block">
+                <div class="profile-image-container">
+                  <img src="{{ url_for('static', filename='images/' + current_user.picture) }}" alt="User Profile"
+                    class="rounded-circle" width="150" height="150" id="profilePreview">
+                  <div class="profile-image-overlay">
+                    <i class="mdi mdi-camera edit-icon"></i>
+                    <span>Update Photo</span>
+                  </div>
+                </div>
+              </label>
+              <input type="file" id="profileImageInput" name="profile-image" accept="image/*" class="d-none">
+            </div>
+          </form>
+
+          <hr class="my-4">
+
+          <!-- Profile Details Form -->
+          <form id="profileDetailsForm" method="POST">
+            <!-- Profile Fields -->
+            <div class="row">
+              <!-- Staff ID -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label">
+                  {% if is_staff %}
+                  Staff ID
+                  {% elif is_student %}
+                  Student ID
+                  {% elif is_admin %}
+                  ID
+                  {% endif %}
+                </label>
+                {% if is_staff or is_admin %}
+                <input type="text" class="form-control" value="{{ current_user.staff_id }}" disabled>
+                {% elif is_student %}
+                <input type="text" class="form-control" value="{{ current_user.student_id }}" disabled>
+                {% endif %}
+              </div>
+
+              <!-- Email -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" value="{{ current_user.email }}" disabled>
+              </div>
+
+              {% if not is_admin %}
+              <!-- First Name -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label">First Name</label>
+                <input type="text" class="form-control" value="{{ current_user.first_name }}" disabled>
+              </div>
+
+              <!-- Last Name -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Last Name</label>
+                <input type="text" class="form-control" value="{{ current_user.last_name }}" disabled>
+              </div>
+
+              <!-- Gender -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Gender</label>
+                <input type="text" class="form-control" value="{{ current_user.gender }}" disabled>
+              </div>
+              {% endif %}
+
+              {% if is_student %}
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Programme</label>
+                <input type="text" class="form-control" value="{{ current_user.program_code }}" disabled>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Current Part</label>
+                <input type="text" class="form-control" value="Part {{ current_user.part_id }}" disabled>
+              </div>
+              {% endif %}
+
+              <!-- Institution Name -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Institution Name</label>
+                <input type="text" class="form-control" value="{{ current_user.institution_name }}" disabled>
+              </div>
+
+              <!-- Faculty Name -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Faculty Name</label>
+                <input type="text" class="form-control" value="{{ current_user.faculty_name }}" disabled>
+              </div>
+
+              <!-- Position -->
+              {% if is_staff or is_admin %}
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Position</label>
+                <input type="text" class="form-control" value="{{ current_user.position }}" disabled>
+              </div>
+              {% endif %}
+
+              <!-- Phone Number -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Phone Number</label>
+                <input type="tel" name="phone-number" class="form-control editable"
+                  value="{{ current_user.phone_number if current_user.phone_number else '' }}" disabled
+                  data-original="{{ current_user.phone_number }}" pattern="^(\+60|60|01)[\s\-]?[0-9]{1}[0-9\-]{7,9}$"
+                  title="Please enter a valid Malaysian phone number (e.g., 012-3456789)">
+              </div>
+
+              {% if not is_admin %}
+              <!-- Address -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Address</label>
+                <textarea class="form-control editable" name="address" rows="3" disabled
+                  data-original="{{ current_user.address if current_user.address != None else '' }}">{{ current_user.address if current_user.address != None else '' }}</textarea>
+              </div>
+              {% endif %}
+
+            </div>
+
+            <!-- Edit Button -->
+            <div class="text-center mt-3">
+              <button type="button" id="cancelBtn" class="btn btn-secondary d-none">Cancel</button>
+              <button type="button" id="updateBtn" class="btn btn-primary">Update</button>
+              <button type="submit" id="saveBtn" class="btn btn-success d-none">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Profile image auto-update on selection
+  document.getElementById('profileImageInput').addEventListener('change', function (event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById('profilePreview');
+    const form = document.getElementById('profilePictureForm');
+
+    if (file && file.type.startsWith('image/')) {
+      // Update preview
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        preview.src = e.target.result;
+
+        // Auto-submit the form when image is selected
+        form.submit();
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Edit, Cancel, Save button for profile details
+  const editBtn = document.getElementById("updateBtn");
+  const saveBtn = document.getElementById("saveBtn");
+  const cancelBtn = document.getElementById("cancelBtn");
+  const editableFields = document.querySelectorAll(".editable");
+
+  // Store original values on load
+  window.addEventListener("DOMContentLoaded", () => {
+    editableFields.forEach(field => {
+      field.setAttribute("data-original", field.value || field.innerText);
+    });
+  });
+
+  // Edit button logic
+  editBtn.addEventListener("click", () => {
+    editableFields.forEach(field => field.disabled = false);
+    editBtn.classList.add("d-none");
+    saveBtn.classList.remove("d-none");
+    cancelBtn.classList.remove("d-none");
+  });
+
+  // Cancel button logic
+  cancelBtn.addEventListener("click", () => {
+    editableFields.forEach(field => {
+      const original = field.getAttribute("data-original");
+      // Reset value for both input and textarea
+      field.value = original;
+      // Disable the field
+      field.disabled = true;
+    });
+
+    saveBtn.classList.add("d-none");
+    cancelBtn.classList.add("d-none");
+    editBtn.classList.remove("d-none");
+  });
+
+  // Flash messages
+  document.addEventListener("DOMContentLoaded", function () {
+    {% with messages = get_flashed_messages(with_categories = true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    Swal.fire({
+      icon: "{{ 'success' if category == 'success' else 'error' }}",
+      title: "{{ 'Success' if category == 'success' else 'Error' }}",
+      text: "{{ message }}"
+    });
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+  });
+</script>
+{% endblock %}

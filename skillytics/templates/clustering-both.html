@@ -1,0 +1,591 @@
+{% extends "base.html" %}
+
+{% block title %}Skillytics{% endblock %}
+
+{% block custom_style %}
+
+<style>
+  .btn-score {
+    background-color: #88de32 !important;
+    border-color: #88de32 !important;
+    color: white !important;
+  }
+
+  /* Tambahan untuk layout baru */
+  .left-section .card {
+    margin-bottom: 20px;
+  }
+
+  .right-section .card {
+    min-height: 100%;
+  }
+
+  @media (max-width: 1200px) {
+
+    .left-section,
+    .right-section {
+      flex: 0 0 100%;
+      max-width: 100%;
+    }
+
+    .right-section .card {
+      margin-top: 20px;
+    }
+  }
+
+  /* Info icon styling */
+  .info-icon {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+  }
+
+  .card {
+    position: relative;
+  }
+</style>
+
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper active-section">
+  <div class="row">
+    <div class="col-sm-6">
+      <div class="d-flex align-items-center justify-content-md-start mb-3">
+        <div class="mb-3 mb-xl-0 pr-1 d-flex">
+          <div class="floating-dropdown d-flex">
+            <div class="dropdown">
+              <button class="btn btn-info btn-sm dropdown-toggle btn-icon-text border mr-2" type="button"
+                id="programmeDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="typcn typcn-mortar-board mr-2"></i><span id="selected-programme-label">CDCS230</span>
+              </button>
+              <div class="dropdown-menu" aria-labelledby="programmeDropdown">
+                <h6 class="dropdown-header">Programme</h6>
+                <a class="dropdown-item programme-option" data-programme="CDCS230" style="cursor: pointer;">CDCS230</a>
+              </div>
+            </div>
+            <div class="dropdown">
+              <button class="btn btn-info btn-sm dropdown-toggle btn-icon-text border mr-2" type="button"
+                id="partDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="typcn typcn-book mr-2"></i><span id="selected-both-part-label">Part 2</span>
+              </button>
+              <div class="dropdown-menu" aria-labelledby="partDropdown">
+                <h6 class="dropdown-header">Select Part</h6>
+                {% for i in range(2, 8) %}
+                <a class="dropdown-item part-option" data-part="{{ i }}" style="cursor: pointer;">Part {{ i }}</a>
+                {% endfor %}
+              </div>
+
+              <script>
+                document.querySelectorAll('.part-option').forEach(item => {
+                  item.addEventListener('click', function () {
+                    const selectedPart = this.getAttribute('data-part');
+                    document.getElementById('selected-both-part-label').textContent = `Part ${selectedPart}`;
+
+                    // FETCH #1: Chart + silhouette score
+                    fetch(`/api/both-charts?part=${selectedPart}`)
+                      .then(res => res.json())
+                      .then(data => {
+                        renderBothCharts(data);
+                        updateSilhouetteScore(data.score);
+                      });
+
+                    // FETCH #2: Bubble chart only
+                    fetch(`/api/both-bubble-charts?part_id=${selectedPart}`)
+                      .then(res => res.json())
+                      .then(data => {
+                        renderBothBubbleChart(data);
+                      });
+
+                    // FETCH #3: Cluster interpretations (NEW)
+                    loadClusterInterpretations(selectedPart);
+                  });
+                });
+
+                // Update initial load to include cluster interpretations
+                document.addEventListener("DOMContentLoaded", function () {
+                  fetch(`/api/both-charts?part=2`)
+                    .then(res => res.json())
+                    .then(data => {
+                      renderBothCharts(data);
+                      updateSilhouetteScore(data.score);
+                    });
+
+                  fetch(`/api/both-bubble-charts?part_id=2`)
+                    .then(res => res.json())
+                    .then(data => {
+                      renderBothBubbleChart(data);
+                    });
+
+                  // Load initial cluster interpretations
+                  loadClusterInterpretations(2);
+                });
+              </script>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 text-right">
+      <div class="d-inline-block">
+        {% set score_class = 'btn-score' if score >= 0.6 else 'btn-warning' if score >= 0.3 else 'btn-danger' %}
+        <button id="score-button" class="btn btn-sm {{ score_class }} btn-icon-text border" type="button">
+          <i class="fas fa-bullseye mr-0"></i>
+          <span id="silhouette-score">
+            Silhouette Score: {{ '%.2f' % (score * 100) if score is not none else "N/A" }}%
+          </span>
+        </button>
+        <script>
+          function updateSilhouetteScore(score) {
+            const scoreBtn = document.getElementById("score-button");
+            const scoreSpan = document.getElementById("silhouette-score");
+
+            if (!scoreBtn || !scoreSpan) return;
+
+            if (score !== null && !isNaN(score)) {
+              const percentage = (parseFloat(score) * 100).toFixed(2);
+              scoreSpan.textContent = `Silhouette Score: ${percentage}%`;
+
+              scoreBtn.classList.remove("btn-score", "btn-warning", "btn-danger", "btn-secondary");
+
+              if (score >= 0.6) {
+                scoreBtn.classList.add("btn-score");
+              } else if (score >= 0.3) {
+                scoreBtn.classList.add("btn-warning");
+              } else {
+                scoreBtn.classList.add("btn-danger");
+              }
+            } else {
+              scoreSpan.textContent = "Silhouette Score: N/A";
+              scoreBtn.classList.remove("btn-score", "btn-warning", "btn-danger");
+              scoreBtn.classList.add("btn-secondary");
+            }
+          }
+        </script>
+      </div>
+    </div>
+  </div>
+  <div class="row mt-2">
+    <!-- Susun semula: Kiri = carta, Kanan = summary -->
+    <div class="col-xl-9 left-section d-flex flex-column">
+      <!-- Bubble Chart -->
+      <div class="card">
+        <div class="card-body">
+          <span class="btn btn-primary btn-sm rounded-circle info-icon" data-bs-toggle="tooltip" data-bs-placement="top"
+            data-bs-html="true"
+            title="<strong>Bubble Chart</strong> shows student clusters based on both academic and technical performance.<br><strong>Bubble Size</strong>: Represents the average marks.<br><strong>Click</strong>: View all students in that specific cluster">
+            <i class="fas fa-info"></i>
+          </span>
+          <div class="row">
+            <div class="col-12">
+              <div class="row">
+                <div class="col-12 d-flex justify-content-center align-items-center">
+                  <div class="text-center">
+                    <div id="both-bubble-chart"></div>
+                    <script>
+
+                      const clusterColors = {
+                        0: '#e74c3c', // red
+                        1: '#2ecc71', // green
+                        2: '#3498db', // blue
+                        3: '#9b59b6' // purple
+                      };
+
+                      let bubbleChart;
+
+                      function renderBothBubbleChart(data) {
+
+                        data.bubble.forEach(series => {
+                          const clusterNum = series.name.match(/\d+/)?.[0];
+                          series.color = clusterColors[clusterNum];
+                        });
+
+                        if (bubbleChart) {
+                          bubbleChart.update({ series: data.bubble }, true, true);
+                        } else {
+                          bubbleChart = Highcharts.chart('both-bubble-chart', {
+                            chart: { type: 'packedbubble', height: '100%' },
+                            title: { text: 'Clustering Both: Academic & Technical Averages' },
+                            tooltip: {
+                              useHTML: true,
+                              pointFormat: '<b>{point.name}</b><br>Avg Score: <b>{point.value}</b>'
+                            },
+                            plotOptions: {
+                              packedbubble: {
+                                minSize: '10%',
+                                maxSize: '50%',
+                                zMin: 0,
+                                zMax: 4.0,
+                                layoutAlgorithm: {
+                                  gravitationalConstant: 0.05,
+                                  splitSeries: true,
+                                  seriesInteraction: false,
+                                  parentNodeLimit: true
+                                },
+                                dataLabels: {
+                                  enabled: true,
+                                  format: '{point.name}<br>{point.value}',
+                                  style: {
+                                    color: 'black',
+                                    textOutline: 'none'
+                                  }
+                                },
+                                cursor: 'pointer',
+                                point: {
+                                  events: {
+                                    click: function () {
+                                      const cluster_type = 'Academic + Technical'; // "Academic" or "Technical"
+                                      const cluster_num = parseInt(this.series.name.match(/\d+/)[0]); // Extracts number from "Cluster 0"
+                                      const selectedPart = document.getElementById('selected-both-part-label')
+                                        .textContent.replace('Part ', '').trim();
+
+                                      const url = `/staff-students?part=${selectedPart}&cluster_type=${encodeURIComponent(cluster_type)}&cluster_num=${cluster_num}`;
+                                      window.location.href = url;
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            series: data.bubble,
+                            credits: { enabled: false },
+                            responsive: {
+                              rules: [{
+                                condition: {
+                                  maxWidth: 600
+                                },
+                                chartOptions: {
+                                  plotOptions: {
+                                    packedbubble: {
+                                      maxSize: '30%',
+                                      dataLabels: {
+                                        style: {
+                                          fontSize: '8px'
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }]
+                            }
+                          });
+                        }
+                      }
+                    </script>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Scatter Chart -->
+      <div class="card">
+        <div class="card-body">
+          <span class="btn btn-primary btn-sm rounded-circle info-icon" data-bs-toggle="tooltip" data-bs-placement="top"
+            data-bs-html="true"
+            title="<strong>Scatter Plot</strong> displays individual students plotted by their academic vs technical scores.<br><strong>X-axis</strong>: Average Academic Score (0-4)<br><strong>Y-axis</strong>: Average Technical Score (0-5)<br><strong>Click</strong>: View individual student details or entire cluster">
+            <i class="fas fa-info"></i>
+          </span>
+          <div class="row">
+            <div class="col-12">
+              <div class="row d-flex justify-content-center align-items-center">
+                <div class="col-sm-11 d-flex justify-content-md-around align-items-center">
+                  <div id="both-cluster-scatter"></div>
+                  <script>
+                    let bothScatterChart;
+
+                    function renderBothCharts(data) {
+                      // Construct Highcharts series array
+                      const clusters = [...new Set(data.scatter.map(d => d.cluster))].sort();
+
+                      const series = clusters.map(cluster => {
+                        const clusterPoints = data.scatter
+                          .filter(d => d.cluster === cluster)
+                          .map(d => ({
+                            x: Number(d.x.toFixed(2)),
+                            y: Number(d.y.toFixed(2)),
+                            student_id: d.student_id
+                          }));
+
+                        return {
+                          name: `Cluster ${cluster}`,
+                          data: clusterPoints,
+                          color: clusterColors[cluster] || undefined  // ✅ assign color here
+                        };
+                      });
+
+                      if (bothScatterChart) {
+                        bothScatterChart.update({ series: series }, true, true);
+                      } else {
+                        bothScatterChart = Highcharts.chart('both-cluster-scatter', {
+                          chart: { type: 'scatter', zoomType: 'xy' },
+                          title: { text: 'Scatter Plot (Academic Performance × Technical Skill)' },
+                          xAxis: { title: { text: 'GPA Previous Semester' }, min: 0, max: 4 },
+                          yAxis: { title: { text: 'Average Technical Skill Score' }, min: 0, max: 5 },
+                          tooltip: {
+                            formatter: function () {
+                              return `<b>Student:</b> ${this.point.student_id}<br>
+                                        <b>GPA:</b> ${this.x}<br>
+                                        <b>Technical Avg:</b> ${this.y}<br>
+                                        <b>${this.series.name}</b>`;
+                            }
+                          },
+                          plotOptions: {
+                            series: {
+                              cursor: 'pointer',
+                              point: {
+                                events: {
+                                  click: function () {
+                                    const selectedPart = document.getElementById('selected-both-part-label')
+                                      .textContent.replace('Part ', '').trim();
+                                    const cluster_num = this.series.name.match(/\d+/)[0];
+                                    const student_id = this.student_id;
+
+                                    document.getElementById('view-student-btn').setAttribute('data-student-id', student_id);
+                                    document.getElementById('view-cluster-btn').setAttribute('data-part', selectedPart);
+                                    document.getElementById('view-cluster-btn').setAttribute('data-cluster', cluster_num);
+                                    document.getElementById('student-info-label').textContent = `Student ID: ${student_id}`;
+                                    $('#scatterActionModal').modal('show');
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          series: series,
+                          credits: { enabled: false }
+                        });
+                      }
+                    }
+                  </script>
+                  <script>
+                    document.addEventListener("DOMContentLoaded", function () {
+                      document.getElementById('view-student-btn').addEventListener('click', function () {
+                        const studentId = this.getAttribute('data-student-id');
+                        window.location.href = `/staff-students-details?student_id=${studentId}`;
+                      });
+
+                      document.getElementById('view-cluster-btn').addEventListener('click', function () {
+                        const part = this.getAttribute('data-part');
+                        const clusterNum = this.getAttribute('data-cluster');
+                        cluster_type = 'Academic + Technical'
+                        window.location.href = `/staff-students?part=${part}&cluster_type=${encodeURIComponent(cluster_type)}&cluster_num=${clusterNum}`;
+                      });
+                    });
+                  </script>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Dendrogram -->
+      <div class="card">
+        <div class="card-body">
+          <span class="btn btn-primary btn-sm rounded-circle info-icon" data-bs-toggle="tooltip" data-bs-placement="top"
+            data-bs-html="true"
+            title="<strong>Dendrogram</strong> shows the hierarchical clustering structure.<br><strong>Height</strong>: Distance between clusters (lower = more similar)<br><strong>Branches</strong>: How students are grouped together<br><strong>Cut-off</strong>: Determines the number of final clusters">
+            <i class="fas fa-info"></i>
+          </span>
+          <div class="row">
+            <div class="col-12">
+              <div class="row d-flex justify-content-center align-items-center">
+                <div class="col-sm-12">
+                  <script>
+                    function updateDendrogram(part) {
+                      const img = document.getElementById('both-dendrogram');
+                      const timestamp = new Date().getTime(); // cache-busting
+                      img.src = `/api/clustering-both-dendrogram?part=${part}&t=${timestamp}`;
+                    }
+
+                    document.addEventListener("DOMContentLoaded", function () {
+                      let currentPart = 2;
+
+                      updateDendrogram(currentPart);
+
+                      // Part change
+                      document.querySelectorAll('.part-option').forEach(item => {
+                        item.addEventListener('click', function () {
+                          currentPart = this.getAttribute('data-part');
+                          updateDendrogram(currentPart);
+                        });
+                      });
+                    });
+                  </script>
+                  <img id="both-dendrogram" class="img-fluid" alt="Dendrogram">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Kanan: Summary sahaja -->
+    <div class="col-xl-3 right-section mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <span class="btn btn-primary btn-sm rounded-circle info-icon" data-bs-toggle="tooltip" data-bs-placement="top"
+            data-bs-html="true"
+            title="<strong>Cluster Summary</strong> provides detailed analysis of each cluster.<br><strong>Click</strong>: View all students in that cluster<br><strong>Performance Levels</strong>: High/Medium/Low based on academic and technical scores<br><strong>Statistics</strong>: Average scores and student count for each cluster">
+            <i class="fas fa-info"></i>
+          </span>
+          <div class="row">
+            <div class="col-12">
+              <div class="row">
+                <div class="col-12 d-flex justify-content-center align-items-center">
+                  <div class="text-center">
+                    <div id="cluster-interpretations">
+                      <div class="cluster-container">
+                        <h3 class="section-title">Summary</h3>
+                        <div id="interpretations-list">
+                          <!-- Cluster interpretations will be loaded here -->
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Modal for Scatter Click -->
+  <div class="modal fade" id="scatterActionModal" tabindex="-1" role="dialog" aria-labelledby="scatterModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Choose Action</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span>&times;</span>
+          </button>
+        </div>
+        <div class="modal-body text-center">
+          <p id="student-info-label">What do you want to view?</p>
+          <div class="d-flex justify-content-around mt-4">
+            <button class="btn btn-primary" id="view-student-btn">View Student</button>
+            <button class="btn btn-secondary" id="view-cluster-btn">View Cluster</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Function to load cluster interpretations
+    function loadClusterInterpretations(partId = 2) {
+      fetch(`/api/both-cluster-interpretations?part_id=${partId}`)
+        .then(response => response.json())
+        .then(data => {
+          displayInterpretations(data);
+        })
+        .catch(error => {
+          console.error('Error loading cluster interpretations:', error);
+          document.getElementById('interpretations-list').innerHTML =
+            '<p class="text-danger">Error loading cluster interpretations</p>';
+        });
+    }
+
+    // Function to display interpretations
+    function displayInterpretations(interpretations) {
+      const container = document.getElementById('interpretations-list');
+
+      if (!interpretations || interpretations.length === 0) {
+        container.innerHTML = '<p class="text-muted">No cluster data available</p>';
+        return;
+      }
+
+      let html = '';
+      interpretations.forEach((cluster, idx) => {
+        const performanceClass = getPerformanceClass(cluster.academic_level, cluster.technical_level);
+        html += `
+                    <div class="cluster-interpretation ${performanceClass} clickable-cluster" data-cluster-num="${idx}">
+                        <div class="cluster-header">
+                            ${cluster.description}
+                        </div>
+                        <div class="cluster-details">
+                            <div class="detail-item">
+                                <div class="detail-label">Students</div>
+                                <div class="detail-value">${cluster.student_count}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Avg Academic</div>
+                                <div class="detail-value">${cluster.academic_avg}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Avg Technical</div>
+                                <div class="detail-value">${cluster.technical_avg}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Academic Level</div>
+                                <div class="detail-value">${cluster.academic_level}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Technical Level</div>
+                                <div class="detail-value">${cluster.technical_level}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+      });
+
+      container.innerHTML = html;
+
+      // Add click event to each cluster summary
+      document.querySelectorAll('.clickable-cluster').forEach(el => {
+        el.addEventListener('click', function () {
+          const clusterNum = this.getAttribute('data-cluster-num');
+          const selectedPart = document.getElementById('selected-both-part-label').textContent.replace('Part ', '').trim();
+          const clusterType = 'Academic + Technical';
+          window.location.href = `/staff-students?part=${selectedPart}&cluster_type=${encodeURIComponent(clusterType)}&cluster_num=${clusterNum}`;
+        });
+      });
+    }
+
+    // Function to determine performance class for styling
+    function getPerformanceClass(academicLevel, technicalLevel) {
+      if (academicLevel === 'High' && technicalLevel === 'High') {
+        return 'performance-high';
+      } else if (academicLevel === 'Low' && technicalLevel === 'Low') {
+        return 'performance-low';
+      } else {
+        return 'performance-medium';
+      }
+    }
+
+    // Load interpretations when page loads
+    document.addEventListener('DOMContentLoaded', function () {
+      loadClusterInterpretations();
+    });
+
+    // Optional: Add function to refresh with different part
+    function refreshInterpretations(partId) {
+      loadClusterInterpretations(partId);
+    }
+
+    // Add style for clickable cluster
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .clickable-cluster { cursor: pointer; transition: background 0.2s; }
+        .clickable-cluster:hover { background: #f0f8ff; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+        `;
+    document.head.appendChild(style);
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+    });
+  </script>
+
+</div>
+</div>
+
+
+{% endblock %}

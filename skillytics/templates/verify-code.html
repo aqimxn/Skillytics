@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skillytics</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .verification-container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            font-weight: 600;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        
+        .code-input {
+            width: 100%;
+            padding: 14px;
+            font-size: 22px;
+            letter-spacing: 8px;
+            text-align: center;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            background-color: #f9fafc;
+            margin-bottom: 28px;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        
+        .code-input:focus {
+            outline: none;
+            border-color: #4a7bff;
+            box-shadow: 0 0 0 3px rgba(74, 123, 255, 0.1);
+        }
+        
+        .verify-button {
+            background-color: #4a7bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 14px 20px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s;
+        }
+        
+        .verify-button:hover {
+            background-color: #3a6ae6;
+        }
+        
+        .resend {
+            color: #4a7bff;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 24px;
+            cursor: pointer;
+        }
+        
+        .resend:hover {
+            text-decoration: underline;
+        }
+        
+        .lock-icon {
+            margin-bottom: 20px;
+            color: #4a7bff;
+        }
+        
+        @media (max-width: 480px) {
+            .verification-container {
+                padding: 30px 20px;
+                margin: 0 16px;
+            }
+        }
+
+         /* Flash popup container */
+      .custom-flash-popup {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #28a745; /* Default success */
+        color: white;
+        padding: 15px 25px;
+        border-radius: 8px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        z-index: 2000;
+        max-width: 90%;
+        width: auto;
+        display: none;
+        font-size: 15px;
+        font-weight: 50;
+        animation: fadeInOut 4s ease-in-out forwards;
+      }
+      
+      /* Danger style override */
+      .custom-flash-popup.danger {
+        background-color: #dc3545;
+      }
+      
+      /* Toast fade in/out animation */
+      @keyframes fadeInOut {
+        0% { opacity: 0; top: 20px; }
+        10% { opacity: 1; top: 30px; }
+        90% { opacity: 1; top: 30px; }
+        100% { opacity: 0; top: 20px; }
+      }
+      
+      .custom-flash-popup .close-btn {
+        position: absolute;
+        top: 5px;
+        right: 10px;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+      }
+    </style>
+</head>
+<body>
+    <div class="verification-container">
+        <div class="lock-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#4a7bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+        </div>
+        <h1>Email Verification</h1>
+        <p>We have sent a 6-digit verification code to {{ email }}. Please enter it below.</p>
+        
+        <form id="verification-form" method="POST">
+            <input type="text" name="otp-code" class="code-input" maxlength="6" placeholder="------" id="verification-code" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]*" required>
+            
+            <button type="submit" name="verify" class="verify-button">Verify</button>
+        </form>
+        
+        <a id="resend-link" class="resend">Didn't receive a code? Resend</a>
+        
+        <script>
+        document.getElementById('resend-link').addEventListener('click', function(event) {
+            event.preventDefault();
+        
+            const form = document.getElementById('verification-form');
+        
+            // Remove any existing resend input if present
+            const oldResendInput = form.querySelector('input[name="resend"]');
+            if (oldResendInput) oldResendInput.remove();
+        
+            // Add hidden input to indicate resend
+            const resendInput = document.createElement('input');
+            resendInput.type = 'hidden';
+            resendInput.name = 'resend';
+            resendInput.value = '1';
+            form.appendChild(resendInput);
+        
+            form.submit();
+        });
+        </script>
+        
+    </div>
+
+    <div id="flash-popup" class="custom-flash-popup {% for category, message in get_flashed_messages(with_categories=true) %}{{ category }}{% endfor %}" data-message="{% for category, message in get_flashed_messages(with_categories=true) %}{{ message }}{% endfor %}" style="display: none;">
+        <div class="popup-content">
+          <span id="popup-message"></span>
+        </div>
+      </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+          const popup = document.getElementById('flash-popup');
+          const msg = document.getElementById('popup-message');
+          const message = popup.getAttribute('data-message');
+      
+          if (message) {
+            msg.textContent = message;
+            popup.style.display = 'block';
+          }
+        });
+    </script>
+
+</body>
+</html>

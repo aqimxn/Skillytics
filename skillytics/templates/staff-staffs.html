@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+
+{% block title %}Skillytics{% endblock %}
+
+{% block custom_style %}
+<style>
+  .view-staff-btn:focus, 
+.view-staff-btn:active {
+  outline: none;
+  box-shadow: none;
+  border: 1px solid #f50057; /* or whatever your original border color is */
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <div class="row">
+    <div class="col-sm-6">
+    
+    </div>
+    <div class="col-sm-6 mb-4">
+      <div class="d-flex align-items-center justify-content-md-end">
+        <div class="mb-3 mb-xl-0 pr-1">
+          <div class="dropdown">
+            <button class="btn bg-white btn-sm dropdown-toggle btn-icon-text border mr-2" type="button" id="dropdownMenu3" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="typcn typcn-arrow-forward-outline mr-2"></i>Download
+            </button>
+            <div class="dropdown-menu" aria-labelledby="dropdownMenuSizeButton3" data-x-placement="top-start">
+              <h6 class="dropdown-header">Format</h6>
+              <a class="dropdown-item" href="" onclick="downloadStaffFile('csv'); return false;">CSV</a>
+              <a class="dropdown-item" href="" onclick="downloadStaffFile('pdf'); return false;">PDF</a>
+
+              <script>
+                // Add a session storage flag to track downloads
+                function downloadStaffFile(fileType) {
+                  // Determine the correct URL and filename based on file type
+                  let url, filename;
+                  let successMsg = '';
+                  
+                  if (fileType === 'csv') {
+                    url = "{{ url_for('main.download_staffs_csv') }}";
+                    filename = 'staff-list.csv';
+                    successMsg = 'Staff list CSV downloaded successfully!';
+                  } else if (fileType === 'pdf') {
+                    url = "{{ url_for('main.download_staffs_pdf') }}";
+                    filename = 'staff-list.pdf';
+                    successMsg = 'Staff list PDF downloaded successfully!';
+                  } else {
+                    console.error('Invalid file type');
+                    return;
+                  }
+                  
+                  // Start the download
+                  fetch(url)
+                    .then(response => {
+                      if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                      }
+                      return response.blob();
+                    })
+                    .then(blob => {
+                      // Create a temporary link to download the file
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.style.display = 'none';
+                      a.href = url;
+                      a.download = filename;
+                      document.body.appendChild(a);
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                      document.body.removeChild(a);
+                      
+                      // Show success message using SweetAlert and set a flag
+                      Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: successMsg
+                      });
+                      
+                      // Set a session storage flag to prevent duplicate alerts
+                      sessionStorage.setItem('downloadComplete', 'true');
+                    })
+                    .catch(error => {
+                      // Show error message if download fails
+                      Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: `Failed to download staff list. Please try again.`
+                      });
+                      console.error('Download error:', error);
+                    });
+                }
+              </script>
+
+              <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                  // Check if we just completed a download and should skip flash messages
+                  if (sessionStorage.getItem('downloadComplete') === 'true') {
+                    // Clear the flag for future messages
+                    sessionStorage.removeItem('downloadComplete');
+                    return; // Skip displaying flash messages this time
+                  }
+                  
+                  {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    {% for category, message in messages %}
+                      Swal.fire({
+                        icon: "{{ 'success' if category == 'success' else 'error' }}",
+                        title: "{{ 'Success' if category == 'success' else 'Error' }}",
+                        text: "{{ message }}"
+                      });
+                    {% endfor %}
+                  {% endif %}
+                  {% endwith %}
+                });
+              </script>
+                
+            </div>
+          </div>
+        </div>
+        <div class="pr-1 mb-3 mr-0 mb-xl-0">
+          <button type="button" class="btn btn-sm btn-primary btn-icon-text" onclick="location.href='{{ url_for('main.add_staff') }}'">
+            <i class="typcn typcn-user-add-outline mr-2"></i> Add Staff
+          </button>                   
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-lg-12 grid-margin stretch-card">
+      <div class="card">
+        <div class="card-body">
+          <div class="mb-3 d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-center align-items-center ml-2">
+              <button class="btn btn-outline-primary mr-2" id="prev-btn" disabled>Previous</button>
+              <button class="btn btn-outline-primary" id="next-btn">Next</button>
+            </div>
+            <div class="text-center mt-2">
+              <span id="visibleCount">Showing <b>0</b> of <b>0</b> staffs</span>
+            </div>
+           <div class="mb-0 d-flex justify-content-end align-items-center">
+            
+            <select id="columnSelect" class="form-control w-auto mr-3">
+              <option value="all">All</option>
+              <option value="2">Email</option>
+              <option value="3">Name</option>
+              <option value="4">Phone Number</option>
+              <option value="5">Position</option>
+            </select>
+            <input type="text" id="tableSearch" class="form-control w-20" placeholder="Search staffs...">           
+           </div>
+          </div>
+          
+          <div class="table-responsive">
+            <table class="table" id="staffsTable">
+              <thead class="text-center">
+                <tr>
+                  <th>
+                    No
+                  </th>
+                  <th>
+                    User
+                  </th>
+                  <th>
+                    Email
+                  </th>
+                  <th>
+                    Name
+                  </th>
+                  <th>
+                    Phone Number
+                  </th>
+                  <th>
+                    Position
+                  </th>
+                  <th>
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="text-center">
+                {% for staff in staffs_data %}
+                <tr class="staff-row">
+                  <td>{{ loop.index }}</td>
+                  <td><img src="{{ url_for('static', filename='images/' + staff.picture) }}"></td>
+                  <td>{{ staff.email }}</td>
+                  <td>{{ staff.first_name }} {{ staff.last_name }}</td>
+                  <td>{{ staff.phone_number or '-' }}</td>
+                  <td>{{ staff.position or '-' }}</td>
+                  <td>
+                    <a href="#" 
+                      class="btn btn-sm btn-outline-primary mr-1 view-staff-btn" 
+                      data-id="{{ staff.staff_id }}" 
+                      title="View">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                  </td>                
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr id="noResultsRow" class="text-center" style="display: none;">
+                  <td colspan="8" class="text-muted py-4">No staffs found for your search.</td>
+                </tr>
+              </tfoot>
+            </table>
+            
+            <!-- Modal View Staff -->
+            <div class="modal fade" id="staffModal" tabindex="-1" role="dialog" aria-labelledby="staffModalLabel" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="staffModalLabel">Staff Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeModal()">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                  <div class="modal-body text-left">
+                    <div class="text-center mb-3">
+                      <img id="staff-picture" src="" alt="Profile Picture" class="rounded-circle" width="100">
+                    </div>
+                    <table class="table table-bordered">
+                      <tbody>
+                        <tr>
+                          <th scope="row" style="background-color: #b4b1b1;">Staff ID</th>
+                          <td id="staff-id"></td>
+                        </tr>
+                        <tr>
+                          <th scope="row" style="background-color: #b4b1b1;">Name</th>
+                          <td id="staff-name"></td>
+                        </tr>
+                        <tr>
+                          <th scope="row" style="background-color: #b4b1b1;">Email</th>
+                          <td id="staff-email"></td>
+                        </tr>
+                        <tr>
+                          <th scope="row" style="background-color: #b4b1b1;">Position</th>
+                          <td id="staff-position"></td>
+                        </tr>
+                        <tr>
+                          <th scope="row" style="background-color: #b4b1b1;">Phone</th>
+                          <td id="staff-phone"></td>
+                        </tr>
+                        <tr>
+                          <th scope="row" style="background-color: #b4b1b1;">Address</th>
+                          <td id="staff-address"></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>            
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Consolidated JavaScript at the bottom -->
+<script>
+// Function to close modal (fallback if Bootstrap doesn't work)
+function closeModal() {
+  const modal = document.getElementById('staffModal');
+  if (typeof $ !== 'undefined' && $.fn.modal) {
+    // Use Bootstrap's modal method if available
+    $('#staffModal').modal('hide');
+  } else {
+    // Fallback: manually hide the modal
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+    document.body.classList.remove('modal-open');
+    
+    // Remove backdrop if it exists
+    const backdrop = document.querySelector('.modal-backdrop');
+    if (backdrop) {
+      backdrop.remove();
+    }
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const searchInput = document.getElementById("tableSearch");
+  const columnSelect = document.getElementById("columnSelect");
+  const rows = Array.from(document.querySelectorAll("#staffsTable tbody tr"));
+  const countDisplay = document.getElementById("visibleCount");
+  const noResultsRow = document.getElementById("noResultsRow");
+  
+  // Pagination variables
+  const rowsPerPage = 10;
+  let currentPage = 0;
+  let filteredRows = [...rows];
+  
+  const prevBtn = document.getElementById("prev-btn");
+  const nextBtn = document.getElementById("next-btn");
+
+  // Filter and search functionality
+  function updateCount(visibleRows) {
+    countDisplay.innerHTML = `Showing <strong>${visibleRows}</strong> of <strong>${rows.length}</strong> staff${rows.length !== 1 ? 's' : ''}`;
+    noResultsRow.style.display = visibleRows === 0 ? "" : "none";
+  }
+
+  function applyZebraStriping(visibleRows) {
+    visibleRows.forEach((row, index) => {
+      row.classList.remove("table-light");
+      if (index % 2 === 1) {
+        row.classList.add("table-light");
+      }
+    });
+  }
+
+  function updatePagination() {
+    const start = currentPage * rowsPerPage;
+    const end = start + rowsPerPage;
+
+    rows.forEach(row => {
+      row.style.display = "none";
+    });
+
+    const visibleRows = filteredRows.slice(start, end);
+    visibleRows.forEach((row, index) => {
+      row.style.display = "";
+      row.querySelector("td").textContent = start + index + 1;
+    });
+
+    applyZebraStriping(visibleRows);
+    updateCount(visibleRows.length);
+
+    prevBtn.disabled = currentPage === 0;
+    nextBtn.disabled = end >= filteredRows.length;
+  }
+
+  function filterTable() {
+    const query = searchInput.value.toLowerCase().trim();
+    const selectedCol = columnSelect.value;
+
+    filteredRows = rows.filter(row => {
+      const cells = row.querySelectorAll("td");
+      if (selectedCol === "all") {
+        return [...cells].some(cell => cell.textContent.toLowerCase().includes(query));
+      } else {
+        const colIndex = parseInt(selectedCol);
+        if (colIndex === 0) {
+          const index = rows.indexOf(row) + 1;
+          return index.toString().includes(query);
+        } else {
+          return cells[colIndex] && cells[colIndex].textContent.toLowerCase().includes(query);
+        }
+      }
+    });
+
+    currentPage = 0;
+    updatePagination();
+  }
+
+  // Event listeners for search and pagination
+  searchInput.addEventListener("keyup", filterTable);
+  columnSelect.addEventListener("change", filterTable);
+
+  prevBtn.addEventListener("click", () => {
+    if (currentPage > 0) {
+      currentPage--;
+      updatePagination();
+    }
+  });
+
+  nextBtn.addEventListener("click", () => {
+    if ((currentPage + 1) * rowsPerPage < filteredRows.length) {
+      currentPage++;
+      updatePagination();
+    }
+  });
+
+  // Modal functionality - Fixed event delegation
+  document.addEventListener('click', function(event) {
+    if (event.target.closest('.view-staff-btn')) {
+      event.preventDefault();
+      const button = event.target.closest('.view-staff-btn');
+      const staffId = button.getAttribute('data-id');
+
+      fetch(`/api/staff/${staffId}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return res.json();
+        })
+        .then(data => {
+          // Populate modal content
+          document.getElementById('staff-picture').src = data.picture ? `/static/images/${data.picture}` : '';
+          document.getElementById('staff-id').textContent = data.staff_id || '';
+          document.getElementById('staff-name').textContent = data.name || '';
+          document.getElementById('staff-email').textContent = data.email || '';
+          document.getElementById('staff-position').textContent = data.position || '';
+          document.getElementById('staff-phone').textContent = data.phone || '';
+          document.getElementById('staff-address').textContent = data.address || '';
+
+          // Show the modal
+          if (typeof $ !== 'undefined' && $.fn.modal) {
+            $('#staffModal').modal('show');
+          } else {
+            // Fallback: manually show the modal
+            const modal = document.getElementById('staffModal');
+            modal.style.display = 'block';
+            modal.classList.add('show');
+            document.body.classList.add('modal-open');
+            
+            // Add backdrop
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            document.body.appendChild(backdrop);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching staff data:', error);
+          alert('Error loading staff details. Please try again.');
+        });
+    }
+  });
+
+  // Handle modal close events (if Bootstrap is available)
+  if (typeof $ !== 'undefined' && $.fn.modal) {
+    $('#staffModal').on('hidden.bs.modal', function () {
+      $('.view-staff-btn').blur(); // Remove focus from buttons
+    });
+  }
+
+  // Handle ESC key and backdrop click to close modal
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+      const modal = document.getElementById('staffModal');
+      if (modal.classList.contains('show') || modal.style.display === 'block') {
+        closeModal();
+      }
+    }
+  });
+
+  // Handle backdrop click
+  document.addEventListener('click', function(event) {
+    if (event.target.classList.contains('modal-backdrop')) {
+      closeModal();
+    }
+  });
+
+  // Initial load
+  filterTable();
+});
+</script>
+
+{% endblock %}

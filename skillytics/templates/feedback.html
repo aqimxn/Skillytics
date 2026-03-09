@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Skillytics{% endblock %}
+
+{% block custom_style %}
+<style>
+    h4 {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 25px;
+    position: relative;
+    display: inline-block;
+  }
+  
+  h4:after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -10px;
+    width: 150px;
+    height: 4px;
+    background: linear-gradient(to right, #3498db, #2980b9);
+    border-radius: 2px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <div class="row mt-2">
+        <div class="col-xl-12 d-flex grid-margin stretch-card P-0">
+          <div class="card">
+            <div class="card-body">
+              <div class="row">
+                <div class="col-12">
+                  <h4 class="mb-3">📣 Feedback Form</h4>
+                  <form id="feedback-form" method="POST">
+                    <div class="form-group">
+                      <label for="subject">Category <span style="color: red;">*</span></label>
+                      <select class="form-control" id="category" name="category" style="width: 50%;" required>
+                        <option value="">-- Select Category --</option>
+                        {% if is_staff %}
+                        <option value="Data Accuracy">Data Accuracy</option>
+                        <option value="Clustering Results">Clustering Results</option>
+                        <option value="Dendrogram Visualization">Dendrogram Visualization</option>
+                        <option value="PCA Scatter Plot">PCA Scatter Plot</option>
+                        <option value="Bubble Chart Insights">Bubble Chart Insights</option>
+                        <option value="Performance/Speed">Performance/Speed</option>
+                        <option value="Data Export / CSV Issues">Data Export / CSV Issues</option>
+                        {% endif %}
+                        <option value="UI/Design">UI/Design</option>
+                        <option value="User Experience">User Experience</option>
+                        <option value="Other / General Feedback">Other / General Feedback</option>
+                      </select>
+                    </div>
+      
+                    <div class="form-group">
+                      <label for="message">Message <span style="color: red;">*</span></label>
+                      <textarea class="form-control" id="message" name="message" rows="4" placeholder="Write your feedback..." required></textarea>
+                    </div>
+      
+                    <div class="form-group d-flex justify-content-center m-0">
+                      <button type="submit" class="btn btn-secondary">Submit</button>
+                    </div>
+                  </form>
+                  <div id="feedback-response" class="mt-2"></div>
+                  <script>
+                    document.addEventListener("DOMContentLoaded", function () {
+                      {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                          {% for category, message in messages %}
+                            Swal.fire({
+                              icon: "{{ 'success' if category == 'success' else 'error' }}",
+                              title: "{{ 'Success' if category == 'success' else 'Error' }}",
+                              text: "{{ message }}"
+                            });
+                          {% endfor %}
+                        {% endif %}
+                      {% endwith %}
+                    });
+                  </script>
+                  
+                    
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

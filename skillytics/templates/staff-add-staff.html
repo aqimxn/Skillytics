@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Skillytics{% endblock %}
+
+{% block custom_style %}
+<style>
+  .card-title:after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -10px;
+    height: 3px;
+    width: 150px;
+    background-color: #4c6ef5;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <div class="row m-2">
+        <div class="col-xl-12 d-flex grid-margin stretch-card p-0">
+          <div class="card w-100">
+            <div class="card-body">
+              <h4 class="card-title mb-4" style="position: relative;">Add Staff Member</h4>                          
+              <form method="POST" enctype="multipart/form-data">
+                <div class="text-center mb-4">
+                  <div>
+                    <img id="picturePreview" src="/static/images/user-icon.svg"
+                         style="width: 150px; height: 150px; object-fit: cover; border-radius: 50%; margin-bottom: 10px;">
+                  </div>
+                  <input type="file" class="form-control w-auto mx-auto" id="picture" name="staff-picture" accept="image/*">
+                </div>
+              
+                <div class="row">
+                  <input type="hidden" name="staff-id" value="{{ next_id }}">
+              
+                  <div class="col-md-12 mb-3">
+                    <label for="email" class="form-label">Email <span style="color: red;">*</span></label>
+                    <input type="text" class="form-control" id="email" name="staff-email" required
+                           pattern="^[a-zA-Z0-9._%+-]+@(staff\.uitm\.edu\.my|gmail\.com)$"
+                           title="Email must end with @staff.uitm.edu.my or @gmail.com">
+                  </div>                  
+              
+                  <!-- Row 2 -->
+                  <div class="col-md-6 mb-3">
+                    <label for="first_name" class="form-label">First Name <span style="color: red;">*</span></label>
+                    <input type="text" class="form-control" id="first_name" name="staff-first-name" required pattern="^[A-Za-z\s]+$" title="Please enter a valid name">
+                  </div>
+              
+                  <div class="col-md-6 mb-3">
+                    <label for="last_name" class="form-label">Last Name <span style="color: red;">*</span></label>
+                    <input type="text" class="form-control" id="last_name" name="staff-last-name" required pattern="^[A-Za-z\s]+$" title="Please enter a valid name">
+                  </div>
+              
+                  <!-- Row 3 -->
+                  <div class="col-md-6 mb-3">
+                    <label for="gender" class="form-label">Gender <span style="color: red;">*</span></label>
+                    <select class="form-control" id="gender" name="staff-gender" required style="height: 90%;">
+                      <option value="" hidden>Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+              
+                  <div class="col-md-6 mb-3">
+                    <label for="position" class="form-label">Position <span style="color: red;">*</span></label>
+                    <select class="form-control" id="position" name="staff-position" required style="height: 90%;">
+                      <option value="" hidden>Select Position</option>
+                      <option value="Lecturer">Lecturer</option>
+                      <option value="Advisor">Advisor</option>
+                      <option value="IT Support">IT Support</option>
+                    </select>
+                  </div>
+              
+                  <div class="col-md-6 mb-3 mt-3">
+                    <label for="phone" class="form-label">Phone Number</label>
+                    <input type="tel" class="form-control" id="phone" name="staff-phone-number" pattern="^(\+60|60|01)[\s\-]?[0-9]{1}[0-9\-]{7,9}$" title="Please enter a valid Malaysian phone number (e.g., 012-3456789)">
+                  </div>
+              
+                  <div class="col-md-6 mb-3 mt-3">
+                    <label for="address" class="form-label">Address</label>
+                    <textarea class="form-control" id="address" name="staff-address" rows="3" maxlength="200" title="Maximum 200 characters allowed"></textarea>
+                  </div>
+              
+                  <div class="col-12 d-flex justify-content-center">
+                    <button type="submit" class="btn btn-success">Add Staff</button>
+                  </div>
+                </div>
+              </form>
+                        
+            </div>
+          </div>
+        </div>
+    </div>      
+</div>
+
+<script>
+    document.getElementById('picture').addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      const preview = document.getElementById('picturePreview');
+
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+          preview.src = e.target.result;
+        };
+
+        reader.readAsDataURL(file);
+      } else {
+        preview.src = '/static/images/user-icon.svg'; // fallback to default
+      }
+    });
+</script> 
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            Swal.fire({
+              icon: "{{ 'success' if category == 'success' else 'error' }}",
+              title: "{{ 'Success' if category == 'success' else 'Error' }}",
+              text: "{{ message }}"
+            });
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    });
+</script>
+
+{% endblock %}

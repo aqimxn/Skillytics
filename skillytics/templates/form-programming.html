@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block title %}Skillytics{% endblock %}
+
+{% block custom_style %}
+<style>
+    .btn-score {
+      background-color: #88de32 !important;
+      border-color: #88de32 !important;
+      color: white !important;
+    }
+</style>
+<style>
+  .card {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    background: #fff;
+  }
+  
+  .card-body {
+    padding: 30px;
+  }
+  
+  h4 {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 25px;
+    position: relative;
+    display: inline-block;
+  }
+  
+  h4:after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -10px;
+    width: 150px;
+    height: 4px;
+    background: linear-gradient(to right, #3498db, #2980b9);
+    border-radius: 2px;
+  }
+  
+  .question-container {
+    margin-bottom: 30px;
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+  }
+  
+  .question-container:hover {
+    background-color: #f1f8ff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  }
+  
+  .question {
+    font-weight: 500;
+    color: #34495e;
+    margin-bottom: 15px;
+  }
+  
+  /* Radio button styling */
+  .radio-group {
+    display: flex;
+    justify-content: space-between;
+    margin: 20px 0;
+    width: 100%;
+  }
+  
+  .radio-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 18%;
+  }
+  
+  .radio-option label {
+    margin-top: 8px;
+    font-size: 0.85em;
+    color: #7f8c8d;
+    text-align: center;
+    line-height: 1.2;
+  }
+  
+  .radio-custom {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #3498db;
+    border-radius: 50%;
+    outline: none;
+    margin: 0;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+  }
+  
+  .radio-custom:checked {
+    background-color: #3498db;
+  }
+  
+  .radio-custom:checked:after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: white;
+  }
+  
+  .radio-custom:hover {
+    transform: scale(1.1);
+  }
+  
+  .value-display {
+    background-color: #3498db;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 0.9em;
+    display: inline-block;
+    margin-left: 10px;
+    min-width: 30px;
+    text-align: center;
+  }
+  
+  .submit-btn {
+    background: linear-gradient(to right, #3498db, #2980b9);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s;
+    box-shadow: 0 4px 10px rgba(41, 128, 185, 0.3);
+    display: block;
+    margin: 30px auto 10px;
+  }
+  
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(41, 128, 185, 0.4);
+  }
+  
+  .submit-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 5px rgba(41, 128, 185, 0.4);
+  }
+  
+  @media (max-width: 768px) {
+    .card-body {
+      padding: 20px 15px;
+    }
+    
+    .radio-group {
+      flex-wrap: wrap;
+    }
+    
+    .radio-option {
+      width: 30%;
+      margin-bottom: 10px;
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .radio-option {
+      width: 45%;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% set confident = ['Not Confident', 'Slightly Confident', 'Neutral', 'Confident', 'Very Confident'] %}
+{% set effective = ['Not Effective', 'Slightly Effective', 'Neutral', 'Effective', 'Very Effective'] %}
+{% set comfortable = ['Not Comfortable', 'Slightly Comfortable', 'Neutral', 'Comfortable', 'Very Comfortable'] %}
+{% set proficient = ['Not Proficient', 'Slightly Proficient', 'Neutral', 'Proficient', 'Very Proficient'] %}
+
+<div class="content-wrapper">
+    <div class="row mt-2">
+      <div class="col-xl-12 d-flex grid-margin stretch-card P-0">
+        <div class="card">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-12">
+                <h4 class="mb-3">Programming Scores</h4>
+                <form method="POST">
+                  
+                    <div class="question-container">
+                        <div class="question"><h1>1</h1>How confident are you in your ability to design and implement algorithms to solve complex problems?</div>
+                        <div class="radio-group">
+                            {% for i in range(1, 6) %}
+                            <div class="radio-option">
+                                <input type="radio" class="radio-custom" id="q1" name="q1" value="{{ i }}" 
+                                {% if scores and scores['q1_score'] == i %}checked{% endif %} 
+                                disabled required>
+                                <label for="q1">{{ confident[i-1] }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                  
+                  <div class="question-container">
+                    <div class="question"><h1>2</h1>How comfortable are you with version control systems (e.g., Git) for managing and collaborating on code projects?</div>
+                    <div class="radio-group">
+                      {% for i in range(1, 6) %}
+                        <div class="radio-option">
+                          <input type="radio" class="radio-custom" id="q2" name="q2" value="{{ i }}" 
+                            {% if scores and scores['q2_score'] == i %}checked{% endif %} 
+                            disabled required>
+                          <label for="q2">{{ comfortable[i-1] }}</label>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                  
+                  <div class="question-container">
+                    <div class="question"><h1>3</h1>How proficient are you at writing unit tests and ensuring code reliability through test-driven development (TDD)?</div>
+                    <div class="radio-group">
+                      {% for i in range(1, 6) %}
+                        <div class="radio-option">
+                          <input type="radio" class="radio-custom" id="q3" name="q3" value="{{ i }}" 
+                            {% if scores and scores['q3_score'] == i %}checked{% endif %} 
+                            disabled required>
+                          <label for="q3">{{ proficient[i-1] }}</label>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                  
+                  <div class="question-container">
+                    <div class="question"><h1>4</h1>How well can you analyze and optimize the performance of a program (e.g., reducing time or memory usage)?</div>
+                    <div class="radio-group">
+                      {% for i in range(1, 6) %}
+                        <div class="radio-option">
+                          <input type="radio" class="radio-custom" id="q4" name="q4" value="{{ i }}" 
+                            {% if scores and scores['q4_score'] == i %}checked{% endif %} 
+                            disabled required>
+                          <label for="q4">{{ effective[i-1] }}</label>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                  
+                  <div class="question-container">
+                    <div class="question"><h1>5</h1>How comfortable are you with integrating external libraries, APIs, or frameworks into your programming projects?</div>
+                    <div class="radio-group">
+                      {% for i in range(1, 6) %}
+                        <div class="radio-option">
+                          <input type="radio" class="radio-custom" id="q5" name="q5" value="{{ i }}" 
+                            {% if scores and scores['q5_score'] == i %}checked{% endif %} 
+                            disabled required>
+                          <label for="q5">{{ comfortable[i-1] }}</label>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                  
+                  <div class="text-center mt-3">
+                    <button type="button" id="cancelBtn" class="btn btn-secondary d-none" disabled>Cancel</button>
+                    <button type="button" id="updateBtn" class="btn btn-primary" disabled>Update</button>
+                    <button type="submit" id="saveBtn" class="btn btn-success d-none" disabled>Submit</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // UI behavior (update/cancel logic)
+    const updateBtn = document.getElementById("updateBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const cancelBtn = document.getElementById("cancelBtn");
+
+    const radioGroups = document.querySelectorAll('.radio-group');
+
+    radioGroups.forEach(group => {
+        group.querySelectorAll('input[type="radio"]').forEach(input => {
+            if (input.checked) {
+                input.dataset.original = "true";
+            } else {
+                input.dataset.original = "false";
+            }
+            input.disabled = true;
+        });
+    });
+
+    updateBtn.disabled = false;
+
+    updateBtn.addEventListener("click", () => {
+        radioGroups.forEach(group => {
+            group.querySelectorAll('input[type="radio"]').forEach(input => {
+                input.disabled = false;
+            });
+        });
+
+        updateBtn.classList.add("d-none");
+        saveBtn.classList.remove("d-none");
+        cancelBtn.classList.remove("d-none");
+
+        saveBtn.disabled = false;
+        cancelBtn.disabled = false;
+    });
+
+    cancelBtn.addEventListener("click", () => {
+        radioGroups.forEach(group => {
+            group.querySelectorAll('input[type="radio"]').forEach(input => {
+                input.checked = input.dataset.original === "true";
+                input.disabled = true;
+            });
+        });
+
+        saveBtn.classList.add("d-none");
+        cancelBtn.classList.add("d-none");
+        updateBtn.classList.remove("d-none");
+
+        saveBtn.disabled = true;
+        cancelBtn.disabled = true;
+    });
+
+    // ✅ Flash messages (SweetAlert)
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+      Swal.fire({
+        icon: "{{ 'success' if category == 'success' else 'error' }}",
+        title: "{{ 'Success' if category == 'success' else 'Error' }}",
+        text: {{ message|tojson }}
+      });
+      {% endfor %}
+    {% endif %}
+    {% endwith %}
+});
+
+</script>
+{% endblock %}

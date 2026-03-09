@@ -1,0 +1,1029 @@
+{% extends "base.html" %}
+
+{% block title %}Skillytics{% endblock %}
+
+{% block custom_style %}
+<style>
+  .custom-flash-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #28a745;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    z-index: 2000;
+    max-width: 90%;
+    width: auto;
+    display: none;
+    font-size: 15px;
+    font-weight: 50;
+    animation: fadeInOut 4s ease-in-out forwards;
+  }
+
+  .custom-flash-popup.danger {
+    background-color: #dc3545;
+  }
+
+  @keyframes fadeInOut {
+    0% {
+      opacity: 0;
+      top: 20px;
+    }
+
+    10% {
+      opacity: 1;
+      top: 30px;
+    }
+
+    90% {
+      opacity: 1;
+      top: 30px;
+    }
+
+    100% {
+      opacity: 0;
+      top: 20px;
+    }
+  }
+
+  .custom-flash-popup .popup-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .info-icon {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+  }
+
+  .card {
+    position: relative;
+  }
+
+  #academic-gauge,
+  #technical-gauge,
+  #technical-gauge-current-part {
+    min-width: 250px;
+    min-height: 250px;
+    width: 100%;
+    height: 400px;
+    margin: 0 auto;
+    display: block;
+  }
+
+  .dashboard-equal-height .card-body {
+    min-height: 350px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* Responsive gauge row: stack vertically on mobile */
+  @media (max-width: 767px) {
+
+    #academic-gauge,
+    #technical-gauge,
+    #technical-gauge-current-part {
+      min-width: 0;
+      height: 280px;
+    }
+
+    .col-sm-11.d-flex.justify-content-md-around {
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+</style>
+<style>
+  /* Hide all the conditionally shown elements by default */
+  #technical-gauge-current-part-id,
+  #bar-chart-academic-box,
+  #bar-chart-technical-box {
+    display: none;
+  }
+</style>
+
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <div class="row">
+    <div class="col-sm-6">
+      <div class="d-flex align-items-center justify-content-md-start mb-3">
+        <div class="mb-3 mb-xl-0 pr-1">
+          <div class="floating-dropdown d-flex">
+            <div class="dropdown">
+              <button class="btn btn-info btn-sm dropdown-toggle btn-icon-text border mr-2" type="button"
+                id="programmeDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="typcn typcn-mortar-board mr-2"></i><span id="selected-programme-label">CDCS230</span>
+              </button>
+              <div class="dropdown-menu" aria-labelledby="programmeDropdown">
+                <h6 class="dropdown-header">Programme</h6>
+                <a class="dropdown-item programme-option" data-programme="CDCS230" style="cursor: pointer;">CDCS230</a>
+              </div>
+            </div>
+            <div class="dropdown">
+              <button class="btn btn-info btn-sm dropdown-toggle btn-icon-text border mr-2" type="button"
+                id="partDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="typcn typcn-book mr-2"></i><span id="selected-part-label">All Parts</span>
+              </button>
+              <div class="dropdown-menu" aria-labelledby="partDropdown">
+                <h6 class="dropdown-header">Select Part</h6>
+                <a class="dropdown-item part-option" data-part="" style="cursor: pointer;">All</a>
+                {% for i in range(1, 8) %}
+                <a class="dropdown-item part-option" data-part="{{ i }}" style="cursor: pointer;">Part {{ i }}</a>
+                {% endfor %}
+              </div>
+
+              <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                  document.querySelectorAll('.programme-option').forEach(item => {
+                    item.addEventListener('click', function () {
+                      const selectedProgramme = this.getAttribute('data-programme');
+                      document.getElementById('selected-programme-label').textContent = selectedProgramme;
+                    });
+                  });
+                });
+
+                // Add this initialization function
+                function initializeDashboard() {
+                  console.log("Initializing dashboard...");
+
+                  const selectedLabel = document.getElementById('selected-part-label');
+                  let selectedPart = '';
+
+                  if (selectedLabel) {
+                    const labelText = selectedLabel.textContent.trim();
+                    console.log("Initial label text:", labelText);
+
+                    if (labelText === 'All Parts') {
+                      selectedPart = '';
+                    } else if (labelText.startsWith('Part ')) {
+                      selectedPart = labelText.replace('Part ', '').trim();
+                    }
+                  }
+
+                  console.log("Initial selected part:", selectedPart);
+                  updateDashboardVisibility(selectedPart);
+                }
+
+                document.addEventListener('DOMContentLoaded', function () {
+                  initializeDashboard();
+                  document.querySelectorAll('.part-option').forEach(item => {
+                    item.addEventListener('click', function () {
+                      const selectedPart = this.getAttribute('data-part');
+                      const label = selectedPart ? `Part ${selectedPart}` : 'All Parts';
+                      document.getElementById('selected-part-label').textContent = label;
+
+                      updateDashboardVisibility(selectedPart); // ✅ Now works — DOM fully loaded
+
+                      // ✅ Update the student card link immediately
+                      const studentCardLink = document.getElementById('dynamic-part-link');
+                      const updatedURL = `/staff-students${selectedPart ? `?part=${encodeURIComponent(selectedPart)}` : ''}`;
+                      if (studentCardLink) {
+                        studentCardLink.setAttribute('href', updatedURL);
+                      }
+
+                      // ⏳ Fetch updated chart data
+                      fetch(`/dashboard?part=${selectedPart}&_=${Date.now()}`, {
+                        headers: { "X-Requested-With": "XMLHttpRequest" }
+                      })
+                        .then(res => res.json())
+                        .then(data => {
+                          const academicVal = Math.round(data.academic_score * 100) / 100;
+                          const technicalVal = Math.round(data.technical_score * 100) / 100;
+                          const technicalVal_current_part = Math.round(data.technical_score_current_part * 100) / 100;
+
+                          if (academicGauge && academicGauge.series[0]) {
+                            academicGauge.series[0].setData([academicVal], true);
+                          }
+                          if (technicalGauge && technicalGauge.series[0]) {
+                            technicalGauge.series[0].setData([technicalVal], true);
+                          }
+                          if (technicalGauge_current_part && technicalGauge_current_part.series[0]) {
+                            technicalGauge_current_part.series[0].setData([technicalVal_current_part], true);
+                          }
+
+                          document.getElementById("count-up").textContent = data.student_count;
+
+                          if (statusPieChart && statusPieChart.series[0]) {
+                            statusPieChart.series[0].setData(data.pie_chart_data, true);
+                          }
+
+                          if (data.courses_barchart && data.grades_barchart) {
+                            createBarChartAcademic(data.courses_barchart, data.grades_barchart);
+                          } else {
+                            document.getElementById("bar-chart-academic").innerHTML =
+                              '<div style="text-align: center; padding: 50px; color: #666; font-size: 16px;">No data available for the selected part</div>';
+                          }
+
+                          if (data.technical_categories && data.technical_scores) {
+                            createBarChartTechnical(data.technical_categories, data.technical_scores);
+                          } else {
+                            document.getElementById("bar-chart-technical").innerHTML =
+                              '<div style="text-align: center; padding: 50px; color: #666; font-size: 16px;">No data available for the selected part</div>';
+                          }
+                        });
+                    });
+                  });
+
+                  // ✅ Call visibility logic on initial load too
+                  const selectedLabel = document.getElementById('selected-part-label').textContent.trim();
+                  let selectedPart = '';
+                  if (selectedLabel.startsWith('Part')) {
+                    selectedPart = selectedLabel.replace('Part ', '').trim();
+                  }
+                });
+              </script>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 text-right">
+      <div class="d-inline-block">
+        <p class="mb-0 font-weight-bold">Last Online:</p>
+        <p class="mb-0">{{ last_online_display }}</p>
+      </div>
+    </div>
+
+  </div>
+  <div class="row mt-2 dashboard-equal-height">
+    <div class="col-xl-12 grid-margin stretch-card" id="both-gauge-part-id">
+      <div class="card">
+        <div class="card-body">
+          <span class="btn btn-primary btn-sm rounded-circle info-icon" data-bs-toggle="tooltip" data-bs-placement="top"
+            data-bs-html="true"
+            title="<strong>Academic Performance</strong>: Taken from GPA of the previous semester.<br><strong>Technical Skills</strong>: Taken from the average of the previous semester.">
+            <i class="fas fa-info"></i>
+          </span>
+          <div class="row">
+            <div class="col-12">
+              <div class="row d-flex justify-content-center align-items-center">
+                <div class="col-sm-11 d-flex flex-column flex-md-row justify-content-md-around align-items-center">
+                  <div class="chart-responsive-wrapper">
+                    <div id="academic-gauge"></div>
+                  </div>
+                  <div class="chart-responsive-wrapper">
+                    <div id="technical-gauge"></div>
+                  </div>
+                  <script>
+                    let academicGauge, technicalGauge, technicalGauge_current_part;
+
+                    document.addEventListener("DOMContentLoaded", function () {
+                      academicGauge = Highcharts.chart('academic-gauge', {
+                        chart: {
+                          type: 'gauge',
+                          plotBackgroundColor: null,
+                          plotBorderWidth: 0,
+                          plotShadow: false
+                        },
+                        title: {
+                          text: 'Previous Academic Performance'
+                        },
+                        pane: {
+                          startAngle: -150,
+                          endAngle: 150,
+                          background: [{
+                            backgroundColor: '#EEE',
+                            innerRadius: '60%',
+                            outerRadius: '100%',
+                            shape: 'arc'
+                          }]
+                        },
+                        yAxis: {
+                          min: 0,
+                          max: 4,
+                          minorTickInterval: 'auto',
+                          minorTickWidth: 1,
+                          minorTickLength: 10,
+                          minorTickPosition: 'inside',
+                          minorTickColor: '#666',
+                          tickPixelInterval: 30,
+                          tickWidth: 2,
+                          tickPosition: 'inside',
+                          tickLength: 10,
+                          tickColor: '#666',
+                          labels: {
+                            step: 2,
+                            rotation: 'auto'
+                          },
+                          title: {
+                            text: 'Avg Academic'
+                          },
+                          plotBands: [{
+                            from: 0,
+                            to: 2,
+                            color: '#DF5353'
+                          }, {
+                            from: 2,
+                            to: 3,
+                            color: '#DDDF0D'
+                          }, {
+                            from: 3,
+                            to: 4,
+                            color: '#55BF3B'
+                          }]
+                        },
+                        series: [{
+                          name: 'Academic',
+                          data: [parseFloat('{{ all_academic_gauge|default(0)|float }}')],
+                          tooltip: {
+                            valueSuffix: ' / 4'
+                          }
+                        }],
+                        credits: {
+                          enabled: false
+                        }
+                      });
+
+                      technicalGauge = Highcharts.chart('technical-gauge', {
+                        chart: {
+                          type: 'gauge',
+                          plotBackgroundColor: null,
+                          plotBorderWidth: 0,
+                          plotShadow: false
+                        },
+                        title: {
+                          text: 'Previous Technical Skills'
+                        },
+                        pane: {
+                          startAngle: -150,
+                          endAngle: 150,
+                          background: [{
+                            backgroundColor: '#EEE',
+                            innerRadius: '60%',
+                            outerRadius: '100%',
+                            shape: 'arc'
+                          }]
+                        },
+                        yAxis: {
+                          min: 0,
+                          max: 5,
+                          minorTickInterval: 'auto',
+                          minorTickWidth: 1,
+                          minorTickLength: 10,
+                          minorTickPosition: 'inside',
+                          minorTickColor: '#666',
+                          tickPixelInterval: 30,
+                          tickWidth: 2,
+                          tickPosition: 'inside',
+                          tickLength: 10,
+                          tickColor: '#666',
+                          labels: {
+                            step: 2,
+                            rotation: 'auto'
+                          },
+                          title: {
+                            text: 'Avg Technical'
+                          },
+                          plotBands: [{
+                            from: 0,
+                            to: 2.5,
+                            color: '#DF5353'
+                          }, {
+                            from: 2.5,
+                            to: 3.75,
+                            color: '#DDDF0D'
+                          }, {
+                            from: 3.75,
+                            to: 5,
+                            color: '#55BF3B'
+                          }]
+                        },
+                        series: [{
+                          name: 'Technical',
+                          data: [parseFloat('{{ all_technical_gauge|default(0)|float }}')],
+                          tooltip: {
+                            valueSuffix: ' / 5'
+                          }
+                        }],
+                        credits: {
+                          enabled: false
+                        }
+                      });
+
+                      technicalGauge_current_part = Highcharts.chart('technical-gauge-current-part', {
+                        chart: {
+                          type: 'gauge',
+                          plotBackgroundColor: null,
+                          plotBorderWidth: 0,
+                          plotShadow: false
+                        },
+                        title: {
+                          text: 'Current Technical Skills'
+                        },
+                        pane: {
+                          startAngle: -150,
+                          endAngle: 150,
+                          background: [{
+                            backgroundColor: '#EEE',
+                            innerRadius: '60%',
+                            outerRadius: '100%',
+                            shape: 'arc'
+                          }]
+                        },
+                        yAxis: {
+                          min: 0,
+                          max: 5,
+                          minorTickInterval: 'auto',
+                          minorTickWidth: 1,
+                          minorTickLength: 10,
+                          minorTickPosition: 'inside',
+                          minorTickColor: '#666',
+                          tickPixelInterval: 30,
+                          tickWidth: 2,
+                          tickPosition: 'inside',
+                          tickLength: 10,
+                          tickColor: '#666',
+                          labels: {
+                            step: 2,
+                            rotation: 'auto'
+                          },
+                          title: {
+                            text: 'Avg Technical'
+                          },
+                          plotBands: [{
+                            from: 0,
+                            to: 2.5,
+                            color: '#DF5353'
+                          }, {
+                            from: 2.5,
+                            to: 3.75,
+                            color: '#DDDF0D'
+                          }, {
+                            from: 3.75,
+                            to: 5,
+                            color: '#55BF3B'
+                          }]
+                        },
+                        series: [{
+                          name: 'Technical',
+                          data: [parseFloat('{{ technicalGauge_current_part|default(0)|float }}')],
+                          tooltip: {
+                            valueSuffix: ' / 5'
+                          }
+                        }],
+                        credits: {
+                          enabled: false
+                        }
+                      });
+                    });
+                  </script>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-4 grid-margin stretch-card" id="technical-gauge-current-part-id">
+      <div class="card">
+        <div class="card-body">
+          <span class="btn btn-primary btn-sm rounded-circle info-icon" data-bs-toggle="tooltip" data-bs-placement="top"
+            data-bs-html="true" title="Taken from the average of the <strong>current</strong> semester.">
+            <i class="fas fa-info"></i>
+          </span>
+          <div class="row">
+            <div class="col-12">
+              <div class="row d-flex justify-content-center align-items-center">
+                <div class="col-sm-12">
+                  <div class="chart-responsive-wrapper">
+                    <div id="technical-gauge-current-part"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-6 d-flex grid-margin stretch-card" id="total-students-box">
+      <div class="card">
+        <span class="btn btn-primary btn-sm rounded-circle info-icon" data-bs-toggle="tooltip" data-bs-placement="top"
+          data-bs-html="true"
+          title="Total students from the selected part.<br><strong>Click</strong>: View all students in that specific part">
+          <i class="fas fa-info"></i>
+        </span>
+        <a id="dynamic-part-link" class="text-decoration-none text-dark" title="Click to view students">
+
+          <div class="card-body d-flex justify-content-center align-items-center" style="height: 100%;">
+            <div class="d-flex flex-wrap justify-content-center">
+              <img src="static/images/students.svg" alt="students" style="width: 200px;">
+            </div>
+            <div class="row mt-4">
+              <div class="col-12 d-flex justify-content-center align-items-center">
+                <div class="text-center fs-1">
+                  Total Registered Students
+                </div>
+              </div>
+            </div>
+            <div class="row mt-4">
+              <div class="col-12 d-flex justify-content-center align-items-center">
+                <div class="text-center font-weight-bold" style="font-size: 40px;">
+                  <span id="count-up" data-target="{{ total_students }}">0</span>
+                </div>
+                <script>
+                  document.addEventListener("DOMContentLoaded", function () {
+                    const counter = document.getElementById("count-up");
+                    const target = +counter.getAttribute("data-target");
+                    let count = 0;
+                    const duration = 1500; // milliseconds
+                    const increment = Math.ceil(target / (duration / 30)); // adjust speed
+
+                    const updateCount = () => {
+                      count += increment;
+                      if (count < target) {
+                        counter.textContent = count;
+                        requestAnimationFrame(updateCount);
+                      } else {
+                        counter.textContent = target;
+                      }
+                    };
+
+                    updateCount();
+                  });
+                </script>
+              </div>
+            </div>
+          </div>
+        </a>
+        <script>
+          document.addEventListener('DOMContentLoaded', function () {
+            const partElement = document.getElementById('selected-part-label');
+            const link = document.getElementById('dynamic-part-link');
+
+            if (partElement && link) {
+              const partText = partElement.textContent.trim();
+              const part = partText === 'All Parts' ? '' : partText.replace('Part ', '').trim();
+
+              // Construct the final URL
+              const url = `/staff-students${part ? `?part=${encodeURIComponent(part)}` : ''}`;
+              link.setAttribute('href', url);
+            }
+          });
+        </script>
+      </div>
+    </div>
+
+    <div class="col-xl-6 d-flex grid-margin stretch-card" id="students-status-box">
+      <div class="card">
+        <div class="card-body">
+          <span class="btn btn-primary btn-sm rounded-circle info-icon" data-bs-toggle="tooltip" data-bs-placement="top"
+            data-bs-html="true"
+            title="<strong>Completed</strong> indicates students who have updated their technical skills in the current semester, while <strong>Incomplete</strong> refers to those who have not.<br><strong>Click</strong>: View all students in that specific status">
+            <i class="fas fa-info"></i>
+          </span>
+          <div class="row">
+            <div class="col-12">
+              <div class="row">
+                <div class="col-12 d-flex justify-content-center align-items-center">
+                  <div class="text-center">
+
+                    <div class="chart-responsive-wrapper d-flex justify-content-center">
+                      <div id="all-status-pie" style="height: 300px; width: 300px;"></div>
+                    </div>
+                    <script>
+                      let statusPieChart;
+                      document.addEventListener("DOMContentLoaded", function () {
+                        statusPieChart = Highcharts.chart('all-status-pie', {
+                          chart: { type: 'pie' },
+                          title: { text: "Students' Status" },
+                          plotOptions: {
+                            pie: {
+                              allowPointSelect: true,
+                              cursor: 'pointer',
+                              dataLabels: {
+                                enabled: true,
+                                format: '<b>{point.name}</b>: {point.percentage:.1f}%'
+                              }
+                            }
+                          },
+                          series: [{
+                            name: 'Students',
+                            colorByPoint: true,
+                            data: JSON.parse('{{ all_student_status | tojson | safe }}'),
+                            point: {
+                              events: {
+                                click: function () {
+                                  const status = this.name;
+                                  const partElement = document.getElementById('selected-part-label');
+                                  const partText = partElement.textContent;
+                                  const part = partText === 'All Parts' ? '' : partText.replace('Part ', '');
+                                  const url = `/staff-students?status=${encodeURIComponent(status)}${part ? `&part=${part}` : ''}`;
+                                  window.location.href = url;
+                                }
+                              }
+                            }
+                          }],
+                          credits: { enabled: false }
+                        });
+                      });
+                    </script>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-12 grid-margin stretch-card" id="bar-chart-academic-box">
+      <div class="card">
+        <div class="card-body">
+          <span class="btn btn-primary btn-sm rounded-circle info-icon" data-bs-toggle="tooltip" data-bs-placement="top"
+            data-bs-html="true"
+            title="This section is the result of courses and grades <strong>academic</strong> based on the previous semester.">
+            <i class="fas fa-info"></i>
+          </span>
+          <div class="row">
+            <div class="col-12">
+              <div class="row d-flex justify-content-center align-items-center">
+                <div class="col-sm-12">
+                  <!-- Chart container -->
+                  <div class="chart-responsive-wrapper">
+                    <div id="bar-chart-academic"></div>
+                  </div>
+                  <script>
+                    let barChartAcademic; // Global variable to store the chart instance
+
+                    function createBarChartAcademic(coursesData, gradesData) {
+                      if (!coursesData || !gradesData || coursesData.length === 0) {
+                        document.getElementById("bar-chart-academic").innerHTML =
+                          '<div style="text-align: center; padding: 50px; color: #666; font-size: 16px;">No data available for the selected part</div>';
+                        return;
+                      }
+
+                      try {
+
+                        barChartAcademic = Highcharts.chart("bar-chart-academic", {
+                          chart: {
+                            type: "column"
+                          },
+                          title: {
+                            text: "GPA by Course",
+                            style: {
+                              fontSize: '18px',
+                              fontWeight: 'bold'
+                            }
+                          },
+                          xAxis: {
+                            categories: coursesData,
+                            title: { text: "Course Code" },
+                            labels: {
+                              style: {
+                                fontSize: '11px'
+                              }
+                            }
+                          },
+                          yAxis: {
+                            min: 0,
+                            max: 4,
+                            tickInterval: 0.5,
+                            title: { text: "Average Score" },
+                            plotLines: [{
+                              value: 2.0,
+                              color: 'red',
+                              dashStyle: 'shortdash',
+                              width: 2
+                              // Removed label here, since legend will handle it
+                            }]
+                          },
+                          legend: {
+                            layout: 'vertical',
+                            align: 'left',    // Align top-left
+                            verticalAlign: 'top',
+                            x: 50,
+                            y: -10,
+                            floating: true,
+                            backgroundColor: 'rgba(255,255,255,0.8)',
+                            borderColor: '#ccc',
+                            borderWidth: 1,
+                            itemStyle: { fontSize: '12px' }
+                          },
+                          plotOptions: {
+                            column: {
+                              colorByPoint: false,
+                              color: '#7cb5ec',
+                              dataLabels: {
+                                enabled: true,
+                                format: '{y:.2f}',
+                                style: {
+                                  fontSize: '10px'
+                                }
+                              }
+                            }
+                          },
+                          series: [
+                            {
+                              name: "Average Score",
+                              data: gradesData,
+                              showInLegend: false
+                            },
+                            {
+                              name: "Minimum Pass",
+                              type: 'line',
+                              color: 'red',
+                              dashStyle: 'ShortDash',
+                              marker: { enabled: false },
+                              enableMouseTracking: false,
+                              data: coursesData.map(() => null), // Invisible dummy line for legend
+                              showInLegend: true,
+                              id: 'min-pass'
+                            }
+                          ],
+                          responsive: {
+                            rules: [{
+                              condition: {
+                                maxWidth: 768
+                              },
+                              chartOptions: {
+                                legend: {
+                                  enabled: true
+                                },
+                                series: [{
+                                  id: 'min-pass',
+                                  showInLegend: false
+                                }]
+                              }
+                            }]
+                          },
+                          tooltip: {
+                            formatter: function () {
+                              return `<b>${this.x}</b><br/>Avg: <b>${this.y.toFixed(2)}</b>`;
+                            }
+                          },
+                          credits: { enabled: false },
+                          responsive: {
+                            rules: [{
+                              condition: {
+                                maxWidth: 500
+                              },
+                              chartOptions: {
+                                xAxis: {
+                                  labels: {
+                                    rotation: -90
+                                  }
+                                }
+                              }
+                            }]
+                          }
+                        });
+
+                      } catch (error) {
+                        console.error("Error creating bar chart:", error);
+                        document.getElementById("bar-chart-academic").innerHTML =
+                          '<div style="text-align: center; padding: 50px; color: #ff0000;">Error loading chart</div>';
+                      }
+                    }
+
+                    document.addEventListener("DOMContentLoaded", function () {
+                      const courses = JSON.parse('{{ courses_barchart | tojson | safe }}');
+                      const grades = JSON.parse('{{ grades_barchart | tojson | safe }}');
+
+                      // Initial load
+                      createBarChartAcademic(courses, grades);
+                    });
+                  </script>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-12 grid-margin stretch-card" id="bar-chart-technical-box">
+      <div class="card">
+        <div class="card-body">
+          <span class="btn btn-primary btn-sm rounded-circle info-icon" data-bs-toggle="tooltip" data-bs-placement="top"
+            data-bs-html="true"
+            title="This section is the result of average categories in <strong>technical</strong> based on previous semester.">
+            <i class="fas fa-info"></i>
+          </span>
+          <div class="row">
+            <div class="col-12">
+              <div class="row d-flex justify-content-center align-items-center">
+                <div class="col-sm-12">
+                  <div class="chart-responsive-wrapper">
+                    <div id="bar-chart-technical"></div>
+                  </div>
+                  <script>
+                    let technicalBarChart;
+
+                    function createBarChartTechnical(categories, scores) {
+                      try {
+                        const technicalBox = document.getElementById("bar-chart-technical-box");
+
+                        if (!categories || !scores || categories.length === 0) {
+                          technicalBox.classList.add("d-none");
+                          document.getElementById("bar-chart-technical").innerHTML =
+                            '<div style="text-align: center; padding: 50px; color: #666; font-size: 16px;">No data available for the selected part</div>';
+                          return;
+                        }
+
+                        technicalBox.classList.remove("d-none");
+
+                        technicalBarChart = Highcharts.chart("bar-chart-technical", {
+                          chart: { type: "column" },
+                          title: { text: "Average Technical Skill Score by Category" },
+                          xAxis: {
+                            categories: categories,
+                            title: { text: "Skill Category" },
+                            labels: { style: { fontSize: '11px' } }
+                          },
+                          yAxis: {
+                            min: 0,
+                            max: 5,
+                            tickInterval: 0.5,
+                            title: { text: "Average Score" },
+                            plotLines: [{
+                              value: 2.5,
+                              color: 'red',
+                              dashStyle: 'shortdash',
+                              width: 2
+                            }]
+                          },
+                          legend: {
+                            layout: 'vertical',
+                            align: 'left',    // Top-left positioning
+                            verticalAlign: 'top',
+                            x: 50,
+                            y: -10,
+                            floating: true,
+                            backgroundColor: 'rgba(255,255,255,0.8)', // Optional: white transparent background
+                            borderColor: '#ccc',
+                            borderWidth: 1,
+                            itemStyle: { fontSize: '12px' }
+                          },
+                          plotOptions: {
+                            column: {
+                              dataLabels: {
+                                enabled: true,
+                                format: '{y:.2f}',
+                                style: {
+                                  fontSize: '10px',
+                                  fontWeight: 'bold',
+                                  color: '#000'
+                                }
+                              }
+                            }
+                          },
+                          series: [
+                            {
+                              name: "Avg Score",
+                              data: scores,
+                              type: "column",
+                              showInLegend: false
+                            },
+                            {
+                              name: "Minimum Benchmark",
+                              type: 'line',
+                              color: 'red',
+                              dashStyle: 'ShortDash',
+                              marker: { enabled: false },
+                              enableMouseTracking: false,
+                              data: categories.map(() => null), // Invisible but creates a legend item
+                              showInLegend: true,
+                              id: 'min-benchmark'
+                            }
+                          ],
+                          responsive: {
+                            rules: [{
+                              condition: {
+                                maxWidth: 768
+                              },
+                              chartOptions: {
+                                legend: {
+                                  enabled: true
+                                },
+                                series: [{
+                                  id: 'min-benchmark',
+                                  showInLegend: false
+                                }]
+                              }
+                            }]
+                          },
+                          tooltip: {
+                            formatter: function () {
+                              return `<b>${this.x}</b><br/>Score: <b>${this.y.toFixed(2)}</b>`;
+                            }
+                          },
+                          credits: { enabled: false }
+                        });
+                      } catch (error) {
+                        console.error("Error creating bar chart:", error);
+                        document.getElementById("bar-chart-technical").innerHTML =
+                          '<div style="text-align: center; padding: 50px; color: #ff0000;">Error loading chart</div>';
+                      }
+                    }
+
+                  </script>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div id="flash-popup"
+  class="custom-flash-popup {% for category, message in get_flashed_messages(with_categories=true) %}{{ category }}{% endfor %}"
+  data-message="{% for category, message in get_flashed_messages(with_categories=true) %}{{ message }}{% endfor %}"
+  style="display: none;">
+  <div class="popup-content">
+    <span id="popup-message"></span>
+  </div>
+</div>
+
+
+<!-- Show and hide div -->
+<script>
+  function show(element) {
+    if (element) {
+      element.style.display = 'flex';
+    }
+  }
+
+  function hide(element) {
+    if (element) {
+      element.style.display = 'none';
+    }
+  }
+
+  function updateDashboardVisibility(selectedPartRaw) {
+    const selectedPart = String(selectedPartRaw).trim();
+    const bothGauge = document.getElementById('both-gauge-part-id');
+    const techGaugeCurrent = document.getElementById('technical-gauge-current-part-id');
+    const barAcademic = document.getElementById('bar-chart-academic-box');
+    const barTechnical = document.getElementById('bar-chart-technical-box');
+    const total_students_box = document.getElementById('total-students-box');
+    const students_status_box = document.getElementById('students-status-box');
+
+    if (!bothGauge || !techGaugeCurrent || !barAcademic || !barTechnical || !total_students_box || !students_status_box) {
+      console.warn('❗ One or more elements not found');
+      return;
+    }
+
+    if (selectedPart === '' || selectedPart === 'null') {
+      // All Parts
+      show(bothGauge);
+      hide(techGaugeCurrent);
+      hide(barAcademic);
+      hide(barTechnical);
+      techGaugeCurrent.className = 'd-none';
+      bothGauge.className = 'col-xl-12 grid-margin stretch-card';
+      total_students_box.className = 'col-xl-6 d-flex grid-margin stretch-card';
+      students_status_box.className = 'col-xl-6 d-flex grid-margin stretch-card';
+    } else if (selectedPart === '1') {
+      // Part 1
+      hide(bothGauge);
+      show(techGaugeCurrent);
+      hide(barAcademic);
+      hide(barTechnical);
+      techGaugeCurrent.className = 'col-xl-4 d-flex grid-margin stretch-card';
+      total_students_box.className = 'col-xl-4 d-flex grid-margin stretch-card';
+      students_status_box.className = 'col-xl-4 d-flex grid-margin stretch-card';
+    } else {
+      // Part 2 and above
+      show(bothGauge);
+      show(techGaugeCurrent);
+      show(barAcademic);
+      show(barTechnical);
+      bothGauge.className = 'col-xl-8 grid-margin stretch-card';
+      techGaugeCurrent.className = 'col-xl-4 grid-margin stretch-card';
+      total_students_box.className = 'col-xl-6 d-flex grid-margin stretch-card';
+      students_status_box.className = 'col-xl-6 d-flex grid-margin stretch-card';
+    }
+  }
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+      new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+  });
+</script>
+
+
+
+{% endblock %}

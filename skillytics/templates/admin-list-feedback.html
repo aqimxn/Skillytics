@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block title %}Skillytics{% endblock %}
+
+{% block custom_style %}
+<style>
+.delete-feedback-btn:focus, 
+.delete-feedback-btn:active {
+  outline: none;
+  box-shadow: none;
+  border: 1px solid #f50057; /* or whatever your original border color is */
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+
+  <div class="row">
+    <div class="col-sm-6">
+    
+    </div>
+    {% if feedbacks %}
+    <div class="col-sm-6 mb-4">
+      <div class="d-flex align-items-center justify-content-md-end">
+        <div class="mb-3 mb-xl-0 pr-1">
+          <div class="dropdown">
+            <button class="btn bg-white btn-sm dropdown-toggle btn-icon-text border" type="button" id="dropdownMenu3" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="typcn typcn-arrow-forward-outline mr-2"></i>Download
+            </button>
+            <div class="dropdown-menu" aria-labelledby="dropdownMenuSizeButton3" data-x-placement="top-start">
+              <h6 class="dropdown-header">Format</h6>
+              <a class="dropdown-item" onclick="downloadFeedbackFile('csv'); return false;" style="cursor: pointer;">CSV</a>
+              <a class="dropdown-item" onclick="downloadFeedbackFile('pdf'); return false;" style="cursor: pointer;">PDF</a>
+
+              <script>
+                function downloadFeedbackFile(fileType) {
+                  let url, filename, successMsg;
+              
+                  if (fileType === 'csv') {
+                    url = `{{ url_for('main.download_feedbacks_csv') }}`;
+                    filename = 'feedback-list.csv';
+                    successMsg = 'Feedback list CSV downloaded successfully!';
+                  } else if (fileType === 'pdf') {
+                    url = `{{ url_for('main.download_feedbacks_pdf') }}`;
+                    filename = 'feedback-list.pdf';
+                    successMsg = 'Feedback list PDF downloaded successfully!';
+                  } else {
+                    console.error('Invalid file type');
+                    return;
+                  }
+              
+                  fetch(url)
+                    .then(response => {
+                      if (!response.ok) throw new Error('Network response was not ok');
+                      return response.blob();
+                    })
+                    .then(blob => {
+                      const urlBlob = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = urlBlob;
+                      a.download = filename;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      window.URL.revokeObjectURL(urlBlob);
+              
+                      Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: successMsg
+                      });
+              
+                      sessionStorage.setItem('downloadComplete', 'true');
+                    })
+                    .catch(error => {
+                      Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: `Failed to download feedback list. Please try again.`
+                      });
+                      console.error('Download error:', error);
+                    });
+                }
+              
+              </script> 
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+  
+  <div class="row">
+    <div class="col-lg-12 grid-margin stretch-card">
+      <div class="card">
+        <div class="card-body">
+          <div class="mb-3 d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-center align-items-center ml-2">
+              <button class="btn btn-outline-primary mr-2" id="prev-btn" disabled>Previous</button>
+              <button class="btn btn-outline-primary" id="next-btn">Next</button>
+            </div>
+            <div class="text-center mt-2">
+              <span id="visibleCount">Showing <b>0</b> of <b>0</b> feedbacks</span>
+            </div>
+           <div class="mb-0 d-flex justify-content-end align-items-center">
+            <select id="columnSelect" class="form-control w-auto mr-3">
+              <option value="all">All</option>
+              <option value="1">Sender</option>
+              <option value="2">Email</option>
+              <option value="3">Category</option>
+              <option value="4">Message</option>
+              <option value="5">Time Sent</option>
+            </select>
+            <input type="text" id="tableSearch" class="form-control w-20" placeholder="Search feedbacks...">           
+           </div>
+          </div>
+
+          <script>
+            document.addEventListener("DOMContentLoaded", function () {
+              const searchInput = document.getElementById("tableSearch");
+              const columnSelect = document.getElementById("columnSelect");
+              const rows = Array.from(document.querySelectorAll("#feedbacksTable tbody tr"));
+              const countDisplay = document.getElementById("visibleCount");
+          
+              function updateCount(visibleRows) {
+                countDisplay.innerHTML = `Showing <strong>${visibleRows}</strong> of <strong>${rows.length}</strong> feedback${rows.length !== 1 ? 's' : ''}`;
+              }
+
+              function filterTable() {
+                const query = searchInput.value.toLowerCase();
+                const selectedCol = columnSelect.value;
+                let visibleRows = 0;
+          
+                rows.forEach(row => {
+                  const cells = row.querySelectorAll("td");
+                  let matches = false;
+          
+                  if (selectedCol === "all") {
+                    matches = [...cells].some(cell => cell.textContent.toLowerCase().includes(query));
+                  } else {
+                    const colIndex = parseInt(selectedCol);
+                    matches = cells[colIndex] && cells[colIndex].textContent.toLowerCase().includes(query);
+                  }
+          
+                  row.style.display = matches ? "" : "none";
+                  if (matches) visibleRows++;
+                });
+          
+                updateCount(visibleRows);
+              }
+          
+              searchInput.addEventListener("keyup", filterTable);
+              columnSelect.addEventListener("change", filterTable);
+          
+              filterTable(); // initial
+            });
+          </script>
+          
+          <div class="table-responsive">
+            <table class="table table-bordered" id="feedbacksTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Sender</th>
+                    <th>Email</th>
+                    <th>Category</th>
+                    <th>Message</th>
+                    <th>Time Sent</th>
+                    <th class="d-flex justify-content-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% if feedbacks %}
+                  {% for feedback in feedbacks %}
+                    <tr class="feedback-row">
+                      <td>{{ loop.index }}</td>
+                      <td>
+                        {% if feedback.student_email %}
+                          Student
+                        {% elif feedback.staff_email %}
+                          Staff
+                        {% else %}
+                          Unknown
+                        {% endif %}
+                      </td>
+                      <td>{{ feedback.student_email or feedback.staff_email or 'N/A' }}</td>
+                      <td>{{ feedback.category }}</td>
+                      <td>{{ feedback.message }}</td>
+                      <td>{{ feedback.date_sent }}, {{ feedback.time_sent }}</td>
+                      <td class="text-center">
+                        <a href=""
+                          class="btn btn-sm btn-outline-danger delete-feedback-btn"
+                          data-toggle="modal"
+                          data-target="#deleteModal"
+                          data-id="{{ feedback.feedback_id }}"
+                          title="Delete">
+                          <i class="fas fa-trash"></i>
+                        </a>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="7" class="text-center text-muted">No feedbacks available.</td>
+                  </tr>
+                {% endif %}
+                </tbody>
+              </table>
+              
+              <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                  // When the modal is about to show
+                  $('#deleteModal').on('show.bs.modal', function (event) {
+                    const button = event.relatedTarget; // The button that triggered the modal
+                    const feedbackId = button.getAttribute('data-id'); // Get feedback ID
+              
+                    // Set the feedback ID in the hidden input
+                    document.getElementById('delete-feedback-id').value = feedbackId;
+                  });
+                });
+              </script>            
+              
+             <!-- Delete Confirmation Modal -->
+            <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <form method="POST" action="{{ url_for('main.admin_list_feedback') }}">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                Are you sure you want to delete this feedback?
+                            </div>
+                            <div class="modal-footer">
+                                <input type="hidden" name="feedback_id" id="delete-feedback-id">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>  
+
+          </div>
+        </div>
+
+        <script>
+          document.addEventListener("DOMContentLoaded", function () {
+            const searchInput = document.getElementById("tableSearch");
+            const columnSelect = document.getElementById("columnSelect");
+            const rows = Array.from(document.querySelectorAll(".feedback-row")); // Only real data rows
+            const countDisplay = document.getElementById("visibleCount");
+            const rowsPerPage = 10;
+            let currentPage = 0;
+            let filteredRows = [...rows];
+
+            const prevBtn = document.getElementById("prev-btn");
+            const nextBtn = document.getElementById("next-btn");
+
+            function updateCount(visibleRows) {
+              countDisplay.innerHTML = `Showing <strong>${visibleRows}</strong> of <strong>${rows.length}</strong> feedback${rows.length !== 1 ? 's' : ''}`;
+            }
+
+            function applyZebraStriping(visibleRows) {
+              visibleRows.forEach((row, index) => {
+                row.classList.remove("table-light");
+                if (index % 2 === 1) {
+                  row.classList.add("table-light");
+                }
+              });
+            }
+
+            function updatePagination() {
+              const start = currentPage * rowsPerPage;
+              const end = start + rowsPerPage;
+
+              rows.forEach(row => {
+                row.style.display = "none";
+              });
+
+              const visibleRows = filteredRows.slice(start, end);
+              visibleRows.forEach((row, index) => {
+                row.style.display = "";
+                row.querySelector("td").textContent = start + index + 1;
+              });
+
+              applyZebraStriping(visibleRows);
+
+              prevBtn.disabled = currentPage === 0;
+              nextBtn.disabled = end >= filteredRows.length;
+
+              updateCount(filteredRows.length); // ✅ Count only visible filtered rows
+            }
+
+            function filterTable() {
+              const query = searchInput.value.toLowerCase().trim();
+              const selectedCol = columnSelect.value;
+
+              filteredRows = rows.filter(row => {
+                const cells = row.querySelectorAll("td");
+                if (selectedCol === "all") {
+                  return [...cells].some(cell => cell.textContent.toLowerCase().includes(query));
+                } else {
+                  const colIndex = parseInt(selectedCol);
+                  return cells[colIndex] && cells[colIndex].textContent.toLowerCase().includes(query);
+                }
+              });
+
+              currentPage = 0;
+              updatePagination();
+            }
+
+            searchInput.addEventListener("keyup", filterTable);
+            columnSelect.addEventListener("change", filterTable);
+            prevBtn.addEventListener("click", () => {
+              if (currentPage > 0) {
+                currentPage--;
+                updatePagination();
+              }
+            });
+
+            nextBtn.addEventListener("click", () => {
+              if ((currentPage + 1) * rowsPerPage < filteredRows.length) {
+                currentPage++;
+                updatePagination();
+              }
+            });
+
+            filterTable(); // Initial load
+          });
+
+        </script>
+
+        </div>
+      </div>
+  </div>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            Swal.fire({
+                icon: "{{ 'success' if category == 'success' else 'error' }}",
+                title: "{{ 'Success' if category == 'success' else 'Error' }}",
+                text: "{{ message }}"
+            });
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+    });
+</script>
+{% endblock %}

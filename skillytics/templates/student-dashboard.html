@@ -1,0 +1,693 @@
+{% extends "base.html" %}
+
+{% block title %}Skillytics{% endblock %}
+
+{% block custom_style %}
+<style>
+  .custom-flash-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #28a745;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    z-index: 2000;
+    max-width: 90%;
+    width: auto;
+    display: none;
+    font-size: 15px;
+    font-weight: 50;
+    animation: fadeInOut 4s ease-in-out forwards;
+  }
+
+  .custom-flash-popup.danger {
+    background-color: #dc3545;
+  }
+
+  @keyframes fadeInOut {
+    0% {
+      opacity: 0;
+      top: 20px;
+    }
+
+    10% {
+      opacity: 1;
+      top: 30px;
+    }
+
+    90% {
+      opacity: 1;
+      top: 30px;
+    }
+
+    100% {
+      opacity: 0;
+      top: 20px;
+    }
+  }
+
+  .custom-flash-popup .popup-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <div class="row">
+    <div class="col-sm-6">
+
+    </div>
+    <div class="col-sm-6 text-right">
+      <div class="d-inline-block">
+        <p class="mb-0 font-weight-bold">Last Online:</p>
+        <p class="mb-0">{{ last_online_display }}</p>
+      </div>
+    </div>
+
+  </div>
+  <div class="row mt-2">
+    <div class="col-xl-8 d-flex grid-margin stretch-card P-0">
+      <div class="card">
+        <div class="card-body d-flex justify-content-center align-items-center">
+          <div class="row">
+            <div class="col-12">
+              <div class="row d-flex justify-content-center align-items-center">
+                <div class="col-sm-11 d-flex justify-content-center align-items-center">
+                  {% if gpa_points %}
+                  <!-- Always render the chart container -->
+                  <div class="chart-responsive-wrapper">
+                    <div id="line-gpa" style="height: 350px; position: relative; width: 100%;"></div>
+                  </div>
+
+
+                  <script>
+                    var gpaData = {{ gpa_points | tojson }};
+                    var seriesData = gpaData.map(function (item) {
+                      return { x: item.x, y: item.y };
+                    });
+
+                    Highcharts.chart('line-gpa', {
+                      chart: {
+                        type: 'line',
+                        zoomType: 'xy'
+                      },
+                      title: {
+                        text: 'Grade Points Average Across Parts'
+                      },
+                      xAxis: {
+                        title: {
+                          enabled: true,
+                          text: 'Part'
+                        },
+                        min: 1,
+                        max: 7,
+                        tickInterval: 1,
+                        startOnTick: true,
+                        endOnTick: true
+                      },
+                      yAxis: {
+                        title: {
+                          text: 'GPA'
+                        },
+                        min: 0,
+                        max: 4,
+                        lineWidth: 1,
+                        alignTicks: true
+                      },
+                      series: [{
+                        name: 'GPA',
+                        data: seriesData,
+                        marker: {
+                          enabled: true
+                        }
+                      }],
+                      credits: {
+                        enabled: false
+                      }
+                    });
+                  </script>
+                  {% else %}
+                  <!-- If no data, show fallback inside the chart container -->
+                  <div class="text-center text-muted d-flex align-items-center justify-content-center"
+                    style="font-size: large; height: 300px;">
+                    <em>No GPA records available for previous parts.</em>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-4 d-flex grid-margin stretch-card">
+      <div class="card d-flex align-items-center justify-content-center">
+        <div class="row mt-4 d-flex align-items-center justify-content-center">
+
+          {% if cgpa is not none %}
+          <!-- CGPA Animated Number (Upper Section) -->
+          <div class="col-12 d-flex justify-content-center align-items-center pb-3">
+            <div class="text-center">
+              <div class="font-weight-bold" style="font-size: 50px;">
+                <span id="count-up" data-target="{{ cgpa }}" class="cgpa-value">0</span>
+              </div>
+              <div class="text-muted" style="font-size: 18px; margin-top: 5px;">
+                CGPA
+              </div>
+            </div>
+          </div>
+
+          <!-- Performance Category (Lower Section) -->
+          <div class="col-12 d-flex justify-content-center align-items-center pt-2 pb-4">
+            <div class="text-center">
+              <span id="performance-category" class="badge"
+                style="font-size: 16px; padding: 8px 16px; border-radius: 20px;">
+                Calculating...
+              </span>
+            </div>
+          </div>
+
+          <script>
+            document.addEventListener("DOMContentLoaded", function () {
+              const counter = document.getElementById("count-up");
+              const categoryElement = document.getElementById("performance-category");
+              const target = +counter.getAttribute("data-target");
+
+              // Function to get performance category and styling
+              function getPerformanceCategory(cgpa) {
+                if (cgpa >= 3.5) {
+                  return {
+                    text: "Excellent",
+                    color: "#28a745",
+                    bgColor: "#d4edda"
+                  };
+                } else if (cgpa >= 3) {
+                  return {
+                    text: "Very Good",
+                    color: "#20c997",
+                    bgColor: "#d1ecf1"
+                  };
+                } else if (cgpa >= 2.5) {
+                  return {
+                    text: "Fair",
+                    color: "#ffc107",
+                    bgColor: "#fff3cd"
+                  };
+                } else if (cgpa >= 2) {
+                  return {
+                    text: "Pass",
+                    color: "#fd7e14",
+                    bgColor: "#ffeaa7"
+                  };
+                } else {
+                  return {
+                    text: "Fail",
+                    color: "#6c757d",
+                    bgColor: "#e2e3e5"
+                  };
+                }
+              }
+
+              // Apply color based on CGPA range
+              const category = getPerformanceCategory(target);
+              counter.style.color = category.color;
+
+              let count = 0;
+              const duration = 3000;
+              const increment = target / (duration / 52);
+
+              const updateCount = () => {
+                count += increment;
+                if (count < target) {
+                  counter.textContent = count.toFixed(2);
+                  requestAnimationFrame(updateCount);
+                } else {
+                  counter.textContent = target.toFixed(2);
+
+                  // Update performance category after animation completes
+                  categoryElement.textContent = category.text;
+                  categoryElement.style.color = category.color;
+                  categoryElement.style.backgroundColor = category.bgColor;
+                  categoryElement.style.border = `1px solid ${category.color}`;
+                }
+              };
+
+              updateCount();
+            });
+          </script>
+
+          {% else %}
+          <!-- Fallback if CGPA is missing -->
+          <div class="text-center text-muted d-flex align-items-center justify-content-center"
+            style="font-size: large; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%;">
+            <em>CGPA is not available yet.</em>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-xl-12 d-flex grid-margin stretch-card P-0">
+      <div class="card">
+        <div class="card-body">
+          <div class="row">
+
+            {% if grades and current_user.part.part_no > 1 %}
+            <div class="form-group mb-3 d-flex flex-column flex-sm-row align-items-sm-center" style="width: 100%;">
+              <label for="academic-part-select" class="mb-2 mb-sm-0 mr-sm-3">Select Part:</label>
+              <select id="academic-part-select" class="form-control" style="max-width: 200px;">
+                {% for p in range(1, current_user.part.part_no) %}
+                <option value="{{ p }}" {% if p==max_part_for_filter %}selected{% endif %}>Part {{ p }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+
+            <div class="col-12">
+              <div class="row d-flex justify-content-center align-items-center">
+                <div class="col-sm-12 text-center">
+
+                  {% if grades and current_user.part.part_no > 1 %}
+                  <div class="chart-responsive-wrapper">
+                    <div id="bar-chart-academic"></div>
+                  </div>
+                  <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                      const select = document.getElementById('academic-part-select');
+                      let academicChart;
+
+                      function renderAcademicChart(courses, grades, letters) {
+                        // Destroy existing chart if it exists
+                        if (academicChart) {
+                          academicChart.destroy();
+                        }
+
+                        academicChart = Highcharts.chart('bar-chart-academic', {
+                          chart: { type: 'column' },
+                          title: { text: 'Courses Grade', align: 'center' },
+                          xAxis: {
+                            categories: courses,
+                            title: { text: 'Courses' },
+                            labels: { style: { fontSize: '12px' } }
+                          },
+                          yAxis: {
+                            min: 0,
+                            max: 4,
+                            tickInterval: 0.5,
+                            title: { text: 'Grade Points Average' },
+                            plotLines: [
+                              {
+                                value: 2.0,
+                                color: 'red',
+                                dashStyle: 'shortdash',
+                                width: 2
+                              },
+                              {
+                                value: 3.0,
+                                color: 'orange',
+                                dashStyle: 'shortdash',
+                                width: 2
+                              },
+                              {
+                                value: 3.5,
+                                color: 'green',
+                                dashStyle: 'shortdash',
+                                width: 2
+                              }
+                            ]
+                          },
+                          legend: {
+                            enabled: true,
+                            layout: 'horizontal',  // Makes the legend items appear in a row
+                            align: 'center',       // Aligns the legend horizontally at the top
+                            verticalAlign: 'top', // Position the legend above the chart title
+                            y: -10,                // Adjust vertical position to place it above the title
+                            backgroundColor: 'rgba(255,255,255,0.8)',
+                            borderColor: '#ccc',
+                            borderWidth: 1,
+                            itemStyle: { fontSize: '12px' }
+                          },
+                          series: [
+                            {
+                              name: 'Grade Points',
+                              showInLegend: false,
+                              data: grades.map(function (grade, i) {
+                                return {
+                                  y: grade,
+                                  letter: letters[i],
+                                  color: grade >= 3.5 ? '#28a745' :       // Excellent
+                                    grade >= 3.0 ? '#20c997' :       // Good
+                                      grade >= 2.5 ? '#ffc107' :       // Average
+                                        grade >= 2.0 ? '#fd7e14' :       // Barely Pass
+                                          '#dc3545'         // Fail
+                                };
+                              }),
+                              dataLabels: {
+                                enabled: true,
+                                format: '{y:.2f}',
+                                style: { fontWeight: 'bold' }
+                              }
+                            },
+                            // Dummy series for the legend (Threshold Lines)
+                            {
+                              name: 'Minimum Pass (2.0)',
+                              type: 'line',
+                              color: 'red',
+                              dashStyle: 'ShortDash',
+                              marker: { enabled: false },
+                              enableMouseTracking: false,
+                              data: courses.map(() => null), // Invisible but creates legend item
+                              showInLegend: true
+                            },
+                            {
+                              name: 'Good (3.0)',
+                              type: 'line',
+                              color: 'orange',
+                              dashStyle: 'ShortDash',
+                              marker: { enabled: false },
+                              enableMouseTracking: false,
+                              data: courses.map(() => null), // Invisible but creates legend item
+                              showInLegend: true
+                            },
+                            {
+                              name: 'Excellent (3.5)',
+                              type: 'line',
+                              color: 'green',
+                              dashStyle: 'ShortDash',
+                              marker: { enabled: false },
+                              enableMouseTracking: false,
+                              data: courses.map(() => null), // Invisible but creates legend item
+                              showInLegend: true
+                            }
+                          ],
+                          tooltip: {
+                            formatter: function () {
+                              return '<b>' + this.x + '</b><br/>' +
+                                'Grade: <b>' + this.point.letter + '</b><br/>' +
+                                'Grade Points: <b>' + this.y.toFixed(2) + '</b>';
+                            }
+                          },
+                          credits: { enabled: false },
+                          plotOptions: {
+                            column: {
+                              borderWidth: 0,
+                              borderRadius: 3
+                            }
+                          }
+                        });
+                      }
+
+                      // Render initial chart using Flask variables
+                      renderAcademicChart({{ courses| tojson }}, {{ grades| tojson }}, {{ letters| tojson }});
+
+                    // Handle dropdown change
+                    select.addEventListener('change', function () {
+                      const selectedPart = select.value;
+
+                      fetch(`/student/academic-data?part=${selectedPart}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                      })
+                        .then(response => response.json())
+                        .then(data => {
+                          if (data.courses && data.grades && data.letters) {
+                            // Use the NEW data from the server response, not the old Flask variables
+                            renderAcademicChart(data.courses, data.grades, data.letters);
+                          } else {
+                            console.error('Invalid data received:', data);
+                          }
+                        })
+                        .catch(error => {
+                          console.error('Error loading academic data:', error);
+                        });
+                    });
+                        });
+                  </script>
+
+                  {% else %}
+                  <div class="text-center text-muted">
+                    <div class="d-flex align-items-center justify-content-center"
+                      style="height: 400px; font-size: large;">
+                      <em>No academic records.</em>
+                    </div>
+                  </div>
+                  {% endif %}
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-12 d-flex grid-margin stretch-card P-0">
+      <div class="card">
+        <div class="card-body">
+          <div class="row">
+            <div class="col-12">
+              <div class="row d-flex justify-content-center align-items-center">
+                <div class="col-sm-12 text-center">
+
+                  {% if tech_categories %}
+                  <div class="chart-responsive-wrapper">
+                    <div id="spiderweb-technical" style="height: 400px;"></div>
+                  </div>
+
+                  <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                      const techData = {{ technical_scores_by_part | tojson
+                    }};
+
+                    // Extract categories from the first part that has them
+                    let categories = [];
+                    if (techData && Object.keys(techData).length > 0) {
+                      const sortedKeys = Object.keys(techData).sort((a, b) => a - b);
+                      for (let key of sortedKeys) {
+                        if (techData[key].categories.length > 0) {
+                          categories = techData[key].categories;
+                          break;
+                        }
+                      }
+                    }
+
+                    const colors = ['#28a745', '#20c997', '#ffc107', '#fd7e14', '#6c757d', '#007bff', '#6610f2'];
+                    const series = [];
+
+                    Object.entries(techData).sort((a, b) => a[0] - b[0]).forEach(([partNo, data], idx) => {
+                      series.push({
+                        name: `Part ${partNo}`,
+                        data: data.scores,
+                        pointPlacement: 'on',
+                        lineWidth: 1,
+                        color: colors[idx % colors.length]
+                      });
+                    });
+
+                    Highcharts.chart('spiderweb-technical', {
+                      chart: {
+                        polar: true,
+                        type: 'line'
+                      },
+                      title: {
+                        text: 'Average Technical Skill Scores by Part',
+                        align: 'center'
+                      },
+                      pane: {
+                        size: '70%'
+                      },
+                      xAxis: {
+                        categories: categories,
+                        tickmarkPlacement: 'on',
+                        lineWidth: 0
+                      },
+                      yAxis: {
+                        min: 0,
+                        max: 5,
+                        tickInterval: 1,
+                        title: {
+                          text: 'Avg Score',
+                          rotation: 0
+                        }
+                      },
+                      series: series,
+                      credits: {
+                        enabled: false
+                      }
+                    });
+                  });
+                  </script>
+                  {% else %}
+                  <div class="text-center text-muted">
+                    <div class="d-flex align-items-center justify-content-center"
+                      style="height: 400px; font-size: large;"><em>No technical skill records.</em></div>
+                  </div>
+                  {% endif %}
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-12 d-flex grid-margin stretch-card P-0">
+      <div class="card">
+        <div class="card-body">
+          <div class="row">
+            <div class="col-12">
+              <div class="row d-flex justify-content-center align-items-center">
+                <div class="col-sm-12 text-center">
+
+                  {% if accumulated_tech_categories %}
+                  <div class="chart-responsive-wrapper">
+                    <div id="bar-technical-accumulated"></div>
+                  </div>
+
+                  <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                      const techDataAccumulated = {{ accumulated_technical_scores_by_part | tojson
+                    }};
+                    let categoriesAccumulated = [];
+                    let seriesAccumulated = []; // Initialize the series array
+
+                    // Extract categories from the first part that has them
+                    if (techDataAccumulated && Object.keys(techDataAccumulated).length > 0) {
+                      const sortedKeys = Object.keys(techDataAccumulated).sort((a, b) => a - b);
+                      for (let key of sortedKeys) {
+                        if (techDataAccumulated[key].categories.length > 0) {
+                          categoriesAccumulated = techDataAccumulated[key].categories;
+                          break;
+                        }
+                      }
+                    }
+
+                    // Colors for dynamic range based on value
+                    function getColorBasedOnValue(value) {
+                      if (value >= 4) {
+                        return '#28a745'; // Green for higher scores
+                      } else if (value >= 3) {
+                        return '#ffc107'; // Yellow for middle scores
+                      } else {
+                        return '#dc3545'; // Red for lower scores
+                      }
+                    }
+
+                    // Get only the LATEST/CURRENT part (highest part number)
+                    if (techDataAccumulated && Object.keys(techDataAccumulated).length > 0) {
+                      const sortedKeys = Object.keys(techDataAccumulated).sort((a, b) => b - a); // Sort descending
+                      const latestPartNo = sortedKeys[0]; // Get the highest part number
+                      const latestData = techDataAccumulated[latestPartNo];
+
+                      // Assign dynamic colors to each score in the series
+                      const coloredScores = latestData.scores.map(score => ({
+                        y: score,
+                        color: getColorBasedOnValue(score) // Apply color based on the score value
+                      }));
+
+                      seriesAccumulated.push({
+                        name: `Cumulative Scores`,
+                        data: coloredScores,
+                        dataLabels: {
+                          enabled: true, // Enable data labels
+                          color: '#000', // White text color
+                          style: {
+                            fontSize: '12px',
+                            fontWeight: 'bold'
+                          },
+                          formatter: function () {
+                            return this.y; // Display the value inside the bar
+                          }
+                        }
+                      });
+                    }
+
+                    // Create the Highcharts bar chart (horizontal bar chart)
+                    Highcharts.chart('bar-technical-accumulated', {
+                      chart: {
+                        type: 'bar' // Horizontal bar chart
+                      },
+                      title: {
+                        text: 'Average Technical Skill Scores',
+                        align: 'center'
+                      },
+                      xAxis: {
+                        categories: categoriesAccumulated,
+                        title: {
+                          text: 'Technical Skill Categories'
+                        }
+                      },
+                      yAxis: {
+                        min: 0,
+                        max: 5,
+                        tickInterval: 1,
+                        title: {
+                          text: 'Avg Score',
+                          rotation: 0
+                        }
+                      },
+                      series: seriesAccumulated,
+                      credits: {
+                        enabled: false
+                      }
+                    });
+                  });
+                  </script>
+
+                  {% else %}
+                  <div class="text-center text-muted">
+                    <div class="d-flex align-items-center justify-content-center"
+                      style="height: 400px; font-size: large;"><em>No technical skill records.</em></div>
+                  </div>
+                  {% endif %}
+
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</div>
+
+<div id="flash-popup"
+  class="custom-flash-popup {% for category, message in get_flashed_messages(with_categories=true) %}{{ category }}{% endfor %}"
+  data-message="{% for category, message in get_flashed_messages(with_categories=true) %}{{ message }}{% endfor %}"
+  style="display: none;">
+  <div class="popup-content">
+    <span id="popup-message"></span>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const popup = document.getElementById('flash-popup');
+    const msg = document.getElementById('popup-message');
+    const message = popup.getAttribute('data-message');
+
+    if (message) {
+      msg.textContent = message;
+      popup.style.display = 'block';
+    }
+  });
+</script>
+
+
+
+{% endblock %}

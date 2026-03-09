@@ -1,0 +1,709 @@
+{% extends "base.html" %}
+
+{% block title %}Skillytics{% endblock %}
+
+{% block custom_style %}
+<style>
+  .view-student-btn:focus,
+  .view-student-btn:active {
+    outline: none;
+    box-shadow: none;
+    border: 1px solid #f50057;
+  }
+
+  .notify-student-btn:focus,
+  .notify-student-btn:active {
+    outline: none;
+    box-shadow: none;
+    border: 1px solid #00C853;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <div class="row">
+    <div class="col-sm-12">
+      <div class="d-flex flex-wrap align-items-center justify-content-start mb-3">
+
+        <div class="mb-3 mb-xl-0 pr-1">
+          <div class="dropdown">
+            <button class="btn btn-info btn-sm dropdown-toggle btn-icon-text border mr-2" type="button"
+              id="programmeDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i class="typcn typcn-mortar-board mr-2"></i><span id="selected-programme-label">CDCS230</span>
+            </button>
+            <div class="dropdown-menu" aria-labelledby="programmeDropdown">
+              <h6 class="dropdown-header">Programme</h6>
+              <a class="dropdown-item programme-option" data-programme="CDCS230" style="cursor: pointer;">CDCS230</a>
+            </div>
+          </div>
+        </div>
+        <!-- Part Dropdown -->
+        <div class="mb-3 mb-xl-0 pr-1">
+          <div class="dropdown">
+            <button class="btn btn-info btn-sm dropdown-toggle btn-icon-text border mr-2" type="button"
+              id="partDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i class="fas fa-layer-group mr-2"></i><span id="selected-part-label">All Parts</span>
+            </button>
+            <div class="dropdown-menu" aria-labelledby="partDropdown">
+              <h6 class="dropdown-header">Select Part</h6>
+              <a class="dropdown-item part-option" data-part="All" style="cursor: pointer;">All Parts</a>
+              {% for i in range(1, 8) %}
+              <a class="dropdown-item part-option" data-part="{{ i }}" style="cursor: pointer;">Part {{ i }}</a>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Cluster Type Dropdown -->
+        <div class="mb-3 mb-xl-0 pr-1">
+          <div class="dropdown">
+            <button class="btn btn-info btn-sm dropdown-toggle btn-icon-text border mr-2" type="button"
+              id="clusterTypeDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i class="fas fa-project-diagram mr-2"></i><span id="selected-cluster-type-label">Cluster Type</span>
+            </button>
+            <div class="dropdown-menu" aria-labelledby="clusterTypeDropdown">
+              <h6 class="dropdown-header">Select Cluster</h6>
+              <a class="dropdown-item cluster-type-option" data-cluster-type="Academic + Technical"
+                style="cursor: pointer;">Academic + Technical</a>
+              <a class="dropdown-item cluster-type-option" data-cluster-type="Academic Performance"
+                style="cursor: pointer;">Academic Performance</a>
+              <a class="dropdown-item cluster-type-option" data-cluster-type="Technical Skills"
+                style="cursor: pointer;">Technical Skills</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cluster No Dropdown -->
+        <div class="mb-3 mb-xl-0 pr-1">
+          <div class="dropdown">
+            <button class="btn btn-info btn-sm dropdown-toggle btn-icon-text border mr-2" type="button"
+              id="clusterNoDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i class="typcn typcn-th-list mr-2"></i><span id="selected-cluster-no-label">Cluster No</span>
+            </button>
+            <div class="dropdown-menu" aria-labelledby="clusterNoDropdown" id="cluster-no-menu">
+              <h6 class="dropdown-header">Select Cluster No</h6>
+              <!-- Options will be injected here dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-4 mb-4 pr-2">
+      <div class="d-flex align-items-start justify-content-md-start">
+        <div class="d-inline-block">
+          <button id="notify-button" class="btn btn-sm btn-success border mr-2 notify-student-btn d-none" type="button"
+            data-toggle="modal" data-target="#notifyModal">
+            <i class="fas fa-exclamation-circle mr-2"></i>
+            <span id="notify-all">Notify</span>
+          </button>
+        </div>
+
+        <!-- Modal notify students -->
+        <div class="modal fade" id="notifyModal" tabindex="-1" role="dialog" aria-labelledby="notifyModalLabel"
+          aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+            <div class="modal-content">
+              <form method="POST" action="{{ url_for('main.view_notification') }}">
+
+                <input type="hidden" name="send-notification" value="1">
+                <!-- These will be set dynamically before the modal shows -->
+                <input type="hidden" name="part-id" id="modal-part-id">
+                <input type="hidden" name="cluster-type" id="modal-cluster-type">
+                <input type="hidden" name="cluster-no" id="modal-cluster-no">
+
+                <div class="modal-header">
+                  <h5 class="modal-title" id="notifyModalLabel">Notify Students</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+
+                  <div class="form-group mb-0">
+                    <label for="part-id"><strong>Part:</strong> <span id="notify-part-cluster"></span></label>
+                  </div>
+
+                  <div class="form-group mb-0">
+                    <label for="cluster-type"><strong>Cluster Type:</strong> <span
+                        id="notify-cluster-type"></span></label>
+                  </div>
+
+                  <div class="form-group mb-0">
+                    <label for="cluster-no"><strong>Cluster No:</strong> <span id="notify-cluster-no"></span></label>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="subject"><strong>Subject</strong></label>
+                    <input type="text" name="subject" id="subject" class="form-control" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="message"><strong>Message</strong></label>
+                    <textarea name="message" id="notify-message" class="form-control" rows="4" required></textarea>
+                  </div>
+
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                  <button type="submit" id="send-notification-btn" class="btn btn-success">Send Notification</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3 mb-xl-0 download-student-btn d-none" id="download-button">
+          <div class="dropdown">
+            <button class="btn bg-white btn-sm dropdown-toggle btn-icon-text border mr-2" type="button"
+              id="dropdownMenu3" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i class="typcn typcn-arrow-forward-outline mr-2"></i>Download
+            </button>
+            <div class="dropdown-menu" aria-labelledby="dropdownMenuSizeButton3" data-x-placement="top-start">
+              <h6 class="dropdown-header">Format</h6>
+              <a class="dropdown-item" onclick="downloadStudentFile('csv'); return false;">CSV</a>
+              <a class="dropdown-item" onclick="downloadStudentFile('pdf'); return false;">PDF</a>
+
+              <script>
+                function downloadStudentFile(fileType) {
+                  const selectedPart = document.getElementById("selected-part-label").textContent.replace("Part ", "").trim();
+                  const selectedClusterType = document.getElementById("selected-cluster-type-label").textContent.trim();
+                  const selectedClusterNo = document.getElementById("selected-cluster-no-label").textContent.replace("Cluster ", "").trim();
+
+                  if (!selectedPart || selectedPart === "All Parts" ||
+                    !selectedClusterType || selectedClusterType === "Cluster Type" ||
+                    !selectedClusterNo || selectedClusterNo === "Cluster No") {
+                    Swal.fire({
+                      icon: 'warning',
+                      title: 'Incomplete Selection',
+                      text: 'Please select Part, Cluster Type, and Cluster No before downloading.'
+                    });
+                    return;
+                  }
+
+                  let url, filename, successMsg;
+
+                  if (fileType === 'csv') {
+                    url = `{{ url_for('main.download_students_csv') }}?part_id=${selectedPart}&cluster_type=${encodeURIComponent(selectedClusterType)}&cluster_no=${selectedClusterNo}`;
+                    filename = 'student-list.csv';
+                    successMsg = 'Student list CSV downloaded successfully!';
+                  } else if (fileType === 'pdf') {
+                    url = `{{ url_for('main.download_students_pdf') }}?part_id=${selectedPart}&cluster_type=${encodeURIComponent(selectedClusterType)}&cluster_no=${selectedClusterNo}`;
+                    filename = 'student-list.pdf';
+                    successMsg = 'Student list PDF downloaded successfully!';
+                  } else {
+                    console.error('Invalid file type');
+                    return;
+                  }
+
+                  fetch(url)
+                    .then(response => {
+                      if (!response.ok) throw new Error('Network response was not ok');
+                      return response.blob();
+                    })
+                    .then(blob => {
+                      const urlBlob = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = urlBlob;
+                      a.download = filename;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      window.URL.revokeObjectURL(urlBlob);
+
+                      Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: successMsg
+                      });
+
+                      sessionStorage.setItem('downloadComplete', 'true');
+                    })
+                    .catch(error => {
+                      Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: `Failed to download student list. Please try again.`
+                      });
+                      console.error('Download error:', error);
+                    });
+                }
+
+                // Flash only if not from download
+                document.addEventListener("DOMContentLoaded", function () {
+                  if (sessionStorage.getItem('downloadComplete') === 'true') {
+                    sessionStorage.removeItem('downloadComplete');
+                    return;
+                  }
+
+                  {% with messages = get_flashed_messages(with_categories = true) %}
+                  {% if messages %}
+                  {% for category, message in messages %}
+                  Swal.fire({
+                    icon: "{{ 'success' if category == 'success' else 'error' }}",
+                    title: "{{ 'Success' if category == 'success' else 'Error' }}",
+                    text: "{{ message }}"
+                  });
+                  {% endfor %}
+                  {% endif %}
+                  {% endwith %}
+                });
+              </script>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-12 grid-margin stretch-card">
+      <div class="card">
+        <div class="card-body">
+          <div class="mb-3 d-flex flex-column flex-md-row justify-content-between align-items-center">
+            <div class="d-flex justify-content-center align-items-center mb-3 mb-md-0">
+              <button class="btn btn-outline-primary mr-2" id="prev-btn" disabled>Previous</button>
+              <button class="btn btn-outline-primary" id="next-btn">Next</button>
+            </div>
+            <div class="text-center mb-3 mb-md-0">
+              <span id="visibleCount">Showing <b>0</b> of <b>0</b> students</span>
+            </div>
+            <div class="mb-0 d-flex flex-column flex-sm-row justify-content-end align-items-center w-100 w-md-auto">
+              <div class="d-flex align-items-center mb-2 mb-sm-0 mr-sm-3">
+                <select id="columnSelect" class="form-control w-auto">
+                  <option value="all" {% if not selected_status %}selected{% endif %}>All</option>
+                  <option value="1" {% if selected_student %}selected{% endif %}>Student ID</option>
+                  <option value="2">Name</option>
+                  <option value="4">Both</option>
+                  <option value="5">Academic</option>
+                  <option value="6">Technical</option>
+                  <option value="7" {% if selected_status %}selected{% endif %}>Status</option>
+                </select>
+              </div>
+              <input type="text" id="tableSearch" class="form-control w-100 w-sm-20" placeholder="Search students..." {%
+                if selected_status %} value="{{ selected_status }}" {% endif %} {% if selected_student %}
+                value="{{ selected_student }}" {% endif %}>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table" id="studentsTable">
+              <thead class="text-center">
+                <tr>
+                  <th>User</th>
+                  <th>Student ID</th>
+                  <th>Name</th>
+                  <th>Part</th>
+                  <th>Both</th>
+                  <th>Academic</th>
+                  <th>Technical</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody class="text-center">
+                {% for student in students %}
+                <tr class="student-row" data-part="{{ student.student_part }}"
+                  data-cluster-both="{{ student.cluster_both }}" data-cluster-academic="{{ student.cluster_academic }}"
+                  data-cluster-technical="{{ student.cluster_technical_skills }}">
+                  <td><img src="{{ url_for('static', filename='images/' + student.picture) }}" alt="Profile Picture">
+                  </td>
+                  <td>{{ student.id }}</td>
+                  <td>{{ student.name }}</td>
+                  <td>{{ student.student_part or 'N/A' }}</td>
+                  <td>{{ student.cluster_both if student.cluster_both is not none else '-' }}</td>
+                  <td>{{ student.cluster_academic if student.cluster_academic is not none else '-' }}</td>
+                  <td>{{ student.cluster_technical_skills if student.cluster_technical_skills is not none else '-' }}</td>                  
+                  <td>{{ student.status or '-' }}</td>
+                  <td>
+                    <a class="btn btn-sm btn-outline-primary view-student-btn"
+                      href="{{ url_for('main.staff_students_details', student_id=student.id) }}" title="View">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr id="noResultsRow" class="text-center" style="display: none;">
+                  <td colspan="10" class="text-muted py-4">No students found for your search.</td>
+                </tr>
+              </tfoot>
+            </table>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Global state for filters
+  let state = {
+    selectedPart: "All",
+    selectedClusterType: null,
+    selectedClusterNum: null,
+    searchQuery: "",
+    searchColumn: "all",
+    currentPage: 0,
+    rowsPerPage: 10
+  };
+
+  // Cluster type definitions
+  const clusterTypeOptions = {
+    "Academic + Technical": [0, 1, 2, 3],
+    "Academic Performance": [0, 1, 2],
+    "Technical Skills": [0, 1, 2]
+  };
+
+  // Initialize when DOM is ready
+  document.addEventListener("DOMContentLoaded", function () {
+    initFromUrlParams();
+    setupEventListeners();
+    toggleClusterDropdowns(state.selectedPart);
+    updateFilteredRows();
+
+    // Trigger filter if pre-filled search value exists
+    const searchInput = document.getElementById("tableSearch");
+    if (searchInput.value.trim() !== "") {
+      state.searchQuery = searchInput.value.toLowerCase().trim();
+      updateFilteredRows(); // Ensure filtering happens
+    }
+  });
+
+  // Initialize filters from URL parameters
+  function initFromUrlParams() {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Part filter
+    const part = urlParams.get("part");
+    if (part) {
+      state.selectedPart = part;
+      document.getElementById("selected-part-label").textContent =
+        part === "All" ? "All Parts" : `Part ${part}`;
+    }
+
+    // Cluster type filter
+    const clusterType = urlParams.get("cluster_type");
+    if (clusterType && Object.keys(clusterTypeOptions).includes(clusterType)) {
+      state.selectedClusterType = clusterType;
+      document.getElementById("selected-cluster-type-label").textContent = clusterType;
+
+      // Populate cluster number dropdown options
+      updateClusterNoDropdown(clusterType);
+
+      // Cluster number filter
+      const clusterNum = urlParams.get("cluster_num");
+      if (clusterNum) {
+        state.selectedClusterNum = clusterNum;
+        document.getElementById("selected-cluster-no-label").textContent = `Cluster ${clusterNum}`;
+      }
+    }
+
+    // Search filter (if provided in URL)
+    const search = urlParams.get("search");
+    if (search) {
+      state.searchQuery = search;
+      document.getElementById("tableSearch").value = search;
+    }
+
+    // Column filter (if provided in URL)
+    const column = urlParams.get("column");
+    if (column) {
+      state.searchColumn = column;
+      document.getElementById("columnSelect").value = column;
+    }
+
+    // Update notify button based on selections
+    updateNotifyButtonVisibility();
+  }
+
+  // Toggle visibility of cluster dropdowns based on selected part
+  function toggleClusterDropdowns(selectedPart) {
+    const clusterTypeDropdown = document.getElementById("clusterTypeDropdown").closest(".mb-3");
+    const clusterNoDropdown = document.getElementById("clusterNoDropdown").closest(".mb-3");
+
+    if (selectedPart === "All" || selectedPart === "1") {
+      clusterTypeDropdown.style.display = "none";
+      clusterNoDropdown.style.display = "none";
+
+      // Reset cluster selections
+      state.selectedClusterType = null;
+      state.selectedClusterNum = null;
+      document.getElementById("selected-cluster-type-label").textContent = "Cluster Type";
+      document.getElementById("selected-cluster-no-label").textContent = "Cluster No";
+    } else {
+      clusterTypeDropdown.style.display = "";
+      clusterNoDropdown.style.display = "";
+    }
+
+    // Update notify button visibility
+    updateNotifyButtonVisibility();
+  }
+
+  // Set up all event listeners
+  function setupEventListeners() {
+    // Part selection
+    document.querySelectorAll(".part-option").forEach(item => {
+      item.addEventListener("click", function () {
+        state.selectedPart = this.getAttribute("data-part");
+        document.getElementById("selected-part-label").textContent =
+          state.selectedPart === "All" ? "All Parts" : `Part ${state.selectedPart}`;
+
+        toggleClusterDropdowns(state.selectedPart);
+        state.currentPage = 0;
+        updateFilteredRows();
+        updateURLParams();
+      });
+    });
+
+    // Cluster type selection
+    document.querySelectorAll(".cluster-type-option").forEach(item => {
+      item.addEventListener("click", function () {
+        state.selectedClusterType = this.getAttribute("data-cluster-type");
+        document.getElementById("selected-cluster-type-label").textContent = state.selectedClusterType;
+        state.selectedClusterNum = null;
+        document.getElementById("selected-cluster-no-label").textContent = "Cluster No";
+        state.currentPage = 0;
+        updateClusterNoDropdown(state.selectedClusterType);
+        updateFilteredRows();
+        updateURLParams();
+        updateNotifyButtonVisibility();
+      });
+    });
+
+    // Search input
+    document.getElementById("tableSearch").addEventListener("keyup", function () {
+      state.searchQuery = this.value.toLowerCase().trim();
+      state.currentPage = 0;
+      updateFilteredRows();
+      updateURLParams();
+    });
+
+    // Column selection
+    document.getElementById("columnSelect").addEventListener("change", function () {
+      state.searchColumn = this.value;
+      state.currentPage = 0;
+      updateFilteredRows();
+      updateURLParams();
+    });
+
+    // Pagination buttons
+    document.getElementById("prev-btn").addEventListener("click", function () {
+      if (state.currentPage > 0) {
+        state.currentPage--;
+        updatePagination();
+      }
+    });
+
+    document.getElementById("next-btn").addEventListener("click", function () {
+      const filteredRows = getFilteredRows();
+      if ((state.currentPage + 1) * state.rowsPerPage < filteredRows.length) {
+        state.currentPage++;
+        updatePagination();
+      }
+    });
+
+    // Notify button click handler
+    document.getElementById('notify-button').addEventListener('click', function () {
+      document.getElementById('notify-part-cluster').textContent = state.selectedPart;
+      document.getElementById('notify-cluster-type').textContent = state.selectedClusterType || '';
+      document.getElementById('notify-cluster-no').textContent = state.selectedClusterNum || '';
+
+      // Set form values
+      document.getElementById("modal-part-id").value = state.selectedPart;
+      document.getElementById("modal-cluster-type").value = state.selectedClusterType;
+      document.getElementById("modal-cluster-no").value = state.selectedClusterNum;
+
+    });
+
+    // Fix modal backdrop issues
+    $('.modal').on('hidden.bs.modal', function () {
+      $('body').removeClass('modal-open');
+      $('.modal-backdrop').remove();
+      $(this).removeClass('show');
+      $('.view-student-btn, .notify-student-btn').blur();
+    });
+  }
+
+  // Update cluster number dropdown based on selected cluster type
+  function updateClusterNoDropdown(clusterType) {
+    const clusterNoMenu = document.getElementById('cluster-no-menu');
+
+    // Reset menu
+    clusterNoMenu.innerHTML = '<h6 class="dropdown-header">Select Cluster No</h6>';
+
+    // If no cluster type selected, we're done
+    if (!clusterType || !clusterTypeOptions[clusterType]) {
+      return;
+    }
+
+    // Add options based on cluster type
+    const validNums = clusterTypeOptions[clusterType] || [];
+    validNums.forEach(num => {
+      const item = document.createElement('a');
+      item.className = 'dropdown-item';
+      item.textContent = num;
+      item.setAttribute('data-cluster-no', num);
+      item.style.cursor = 'pointer';
+
+      item.addEventListener('click', function () {
+        state.selectedClusterNum = num.toString();
+        document.getElementById('selected-cluster-no-label').textContent = `Cluster ${num}`;
+        state.currentPage = 0;
+        updateFilteredRows();
+        updateURLParams();
+        updateNotifyButtonVisibility();
+      });
+
+      clusterNoMenu.appendChild(item);
+    });
+  }
+
+  // Update notify button visibility
+  function updateNotifyButtonVisibility() {
+    const notifyBtn = document.getElementById("notify-button");
+    const downloadBtn = document.getElementById("download-button");
+
+    if (state.selectedPart && state.selectedPart !== "All" &&
+      state.selectedClusterType && state.selectedClusterNum !== null) {
+      notifyBtn.classList.remove("d-none");
+      downloadBtn.classList.remove("d-none");
+    } else {
+      notifyBtn.classList.add("d-none");
+      downloadBtn.classList.add("d-none");
+    }
+  }
+
+  // Update URL parameters based on current filter state
+  function updateURLParams() {
+    const params = new URLSearchParams();
+
+    // Add filters to URL
+    if (state.selectedPart !== "All") {
+      params.set("part", state.selectedPart);
+    }
+
+    if (state.selectedClusterType) {
+      params.set("cluster_type", state.selectedClusterType);
+    }
+
+    if (state.selectedClusterNum !== null) {
+      params.set("cluster_num", state.selectedClusterNum);
+    }
+
+    if (state.searchQuery) {
+      params.set("search", state.searchQuery);
+    }
+
+    if (state.searchColumn !== "all") {
+      params.set("column", state.searchColumn);
+    }
+
+    // Update URL without reloading
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+  }
+
+  // Get rows that match all current filters
+  function getFilteredRows() {
+    const rows = Array.from(document.querySelectorAll(".student-row"));
+
+    return rows.filter(row => {
+      // Check part filter
+      if (state.selectedPart !== "All") {
+        const rowPart = row.getAttribute("data-part");
+        if (!rowPart || rowPart !== state.selectedPart) {
+          return false;
+        }
+      }
+
+      // Check cluster filters
+      if (state.selectedClusterType && state.selectedClusterNum !== null) {
+        const clusterMap = {
+          "Academic + Technical": "data-cluster-both",
+          "Academic Performance": "data-cluster-academic",
+          "Technical Skills": "data-cluster-technical"
+        };
+
+        const attr = clusterMap[state.selectedClusterType];
+        if (!attr) return false;
+
+        const clusterVal = row.getAttribute(attr);
+        if (!clusterVal || clusterVal !== state.selectedClusterNum.toString()) {
+          return false;
+        }
+      }
+
+      // Check search query
+      if (state.searchQuery) {
+        const cells = Array.from(row.querySelectorAll("td"));
+
+        if (state.searchColumn === "all") {
+          // Search all columns
+          return cells.some(cell =>
+            cell.textContent.toLowerCase().includes(state.searchQuery)
+          );
+        } else {
+          // Search specific column
+          const colIndex = parseInt(state.searchColumn);
+          return cells[colIndex] &&
+            cells[colIndex].textContent.toLowerCase().includes(state.searchQuery);
+        }
+      }
+
+      return true;
+    });
+  }
+
+  // Update the filtered rows based on all current filters
+  function updateFilteredRows() {
+    const filteredRows = getFilteredRows();
+    const noResultsRow = document.getElementById("noResultsRow");
+
+    // Show/hide the "no results" row
+    if (filteredRows.length === 0) {
+      noResultsRow.style.display = "";
+    } else {
+      noResultsRow.style.display = "none";
+    }
+
+    // Update counter
+    const allRows = document.querySelectorAll(".student-row").length;
+    document.getElementById("visibleCount").innerHTML =
+      `Showing <strong>${filteredRows.length}</strong> of <strong>${allRows}</strong> student${allRows !== 1 ? 's' : ''}`;
+
+    // Update pagination display
+    updatePagination();
+  }
+
+  // Update pagination view
+  function updatePagination() {
+    const filteredRows = getFilteredRows();
+    const start = state.currentPage * state.rowsPerPage;
+    const end = start + state.rowsPerPage;
+
+    // Hide all rows first
+    document.querySelectorAll(".student-row").forEach(row => {
+      row.style.display = "none";
+    });
+
+    // Show only rows for current page
+    filteredRows.slice(start, end).forEach((row, index) => {
+      row.style.display = "";
+      // Apply zebra striping
+      row.classList.remove("table-light");
+      if (index % 2 === 1) {
+        row.classList.add("table-light");
+      }
+    });
+
+    // Update button states
+    document.getElementById("prev-btn").disabled = state.currentPage === 0;
+    document.getElementById("next-btn").disabled = end >= filteredRows.length;
+  }
+</script>
+{% endblock %}
