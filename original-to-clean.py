@@ -329,8 +329,8 @@ def save_cleaned_data(df, output_path):
 def main():
     """Main function to orchestrate the data cleaning process."""
     # Configuration
-    input_file = "C:/Users/aqima/OneDrive/Desktop/PROJECT/skillytics/data/original-data.csv"
-    output_file = "C:/Users/aqima/OneDrive/Desktop/PROJECT/skillytics/data/clean-data.csv"
+    input_file = "./skillytics/data/original-data.csv"
+    output_file = "./skillytics/data/clean-data.csv"
     
     print("Starting data cleaning process...")
     print("=" * 50)
