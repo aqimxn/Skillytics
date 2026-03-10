@@ -23,7 +23,7 @@ from skillytics.utils import is_student, is_staff, is_admin
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///fyp.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///skillytics.db'
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
     # Configure mail
